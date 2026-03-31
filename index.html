@@ -217,6 +217,18 @@
     .ext-link { color: var(--blue); text-decoration: none; font-size: 11px; }
     .ext-link:hover { text-decoration: underline; }
 
+    /* ── CAIXA DE ROLAGEM TABELA (NOVO) ── */
+    .caixa-rolagem-tabela {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .caixa-rolagem-tabela thead th {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 1px 0 var(--border);
+    }
+
     @media (max-width: 640px) {
       .layout { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
       .left { height: auto; max-height: 220px; border-right: none; border-bottom: 0.5px solid var(--border); }
@@ -463,7 +475,7 @@ async function loadPlate(plate) {
 
     <div class="table-card">
       <div class="table-card-header"><div class="table-card-title">Histórico de eventos</div></div>
-      <div class="table-wrap">
+      <div class="table-wrap caixa-rolagem-tabela">
         <table>
           <thead>
             <tr><th>Hora</th><th>Tensão Bat.</th><th>Rastreador</th><th>Ignição</th><th>Mov.</th><th>Evento</th><th>GPS</th><th>GSM</th><th>Vel.</th><th>Delay</th><th>Mapa</th></tr>
@@ -475,7 +487,8 @@ async function loadPlate(plate) {
   `;
 
   const tbody = document.getElementById('evtBody');
-  const displayRows = rows.slice(0, 200);
+  // Alteração feita aqui para mostrar TODOS os eventos em vez de apenas os primeiros 200
+  const displayRows = rows;
   tbody.innerHTML = displayRows.map(r => {
     const vCls = r.tensao == null ? 'tag-gray' : r.tensao >= 11 ? 'tag-green' : r.tensao >= 7 ? 'tag-amber' : 'tag-red';
     return `<tr>
