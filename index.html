@@ -320,8 +320,34 @@ async function queryViaPonte(plate) {
 }
 
 // Como o Metabase via JSON retorna direto os objetos, nós filtramos aqui:
-function parseRows(dataArray) {
-  return dataArray.map(r => ({
+function parseRows(data) {
+  let rows = [];
+  
+  // Se o Metabase mandar o formato completo com colunas e linhas
+  if (data && data.data && data.data.rows) {
+    const colNames = data.data.cols.map(c => c.display_name || c.name);
+    rows = data.data.rows.map(row => {
+      let obj = {};
+      colNames.forEach((name, i) => obj[name] = row[i]);
+      return obj;
+    });
+  } 
+  // Se o Metabase mandar apenas a lista de linhas
+  else if (data && data.rows && Array.isArray(data.rows)) {
+    const colNames = data.cols.map(c => c.display_name || c.name);
+    rows = data.rows.map(row => {
+      let obj = {};
+      colNames.forEach((name, i) => obj[name] = row[i]);
+      return obj;
+    });
+  }
+  // Se já vier como uma lista simples (array)
+  else if (Array.isArray(data)) {
+    rows = data;
+  }
+
+  // Agora mapeia para os nomes que o painel usa
+  return rows.map(r => ({
     placa:    r['Placa'] || r['placa'] || null,
     hora:     r['Hora do evento'] || r['hora'] || null,
     tensao:   r['Tensão Bateria:'] ? parseFloat(r['Tensão Bateria:']) : null,
