@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel — Tensão Bateria</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <style>
+    :root {
+      --bg:       #f5f4f0;
+      --surface:  #ffffff;
+      --surface2: #f1f0ec;
+      --border:   rgba(0,0,0,0.10);
+      --border2:  rgba(0,0,0,0.18);
+      --text:     #1a1a18;
+      --muted:    #5f5e5a;
+      --hint:     #8e8d88;
+      --radius:   8px;
+      --radius-lg:12px;
+      --green-bg: #eaf3de; --green-txt: #27500a; --green-dot: #3b6d11;
+      --amber-bg: #faeeda; --amber-txt: #633806; --amber-dot: #ba7517;
+      --red-bg:   #fcebeb; --red-txt:   #791f1f; --red-dot:   #a32d2d;
+      --blue:     #185fa5;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:       #1c1c1a;
+        --surface:  #252523;
+        --surface2: #1f1f1d;
+        --border:   rgba(255,255,255,0.09);
+        --border2:  rgba(255,255,255,0.16);
+        --text:     #e8e7e2;
+        --muted:    #b4b2a9;
+        --hint:     #6e6d68;
+        --green-bg: #173404; --green-txt: #c0dd97; --green-dot: #639922;
+        --amber-bg: #412402; --amber-txt: #fac775; --amber-dot: #ef9f27;
+        --red-bg:   #501313; --red-txt:   #f7c1c1; --red-dot:   #e24b4a;
+        --blue:     #85b7eb;
+      }
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* ── TOP BAR ── */
+    .topbar {
+      background: var(--surface);
+      border-bottom: 0.5px solid var(--border2);
+      padding: 0 20px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .topbar-title {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -.01em;
+      white-space: nowrap;
+    }
+    .topbar-title span { color: var(--muted); font-weight: 400; }
+    
+    .status-badge {
+      font-size: 11px;
+      background: var(--green-bg);
+      color: var(--green-txt);
+      padding: 4px 10px;
+      border-radius: 99px;
+      font-weight: 500;
+    }
+
+    /* ── LAYOUT ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 240px minmax(0,1fr);
+      gap: 0;
+      height: calc(100vh - 52px);
+    }
+
+    /* ── LEFT PANEL ── */
+    .left {
+      background: var(--surface);
+      border-right: 0.5px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .left-header { padding: 14px 14px 10px; border-bottom: 0.5px solid var(--border); }
+    .section-label { font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--hint); margin-bottom: 8px; }
+    .plate-search-wrap { display: flex; gap: 6px; }
+    .plate-input {
+      flex: 1;
+      padding: 7px 10px;
+      font-size: 13px;
+      background: var(--surface2);
+      border: 0.5px solid var(--border2);
+      border-radius: var(--radius);
+      color: var(--text);
+      outline: none;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .plate-input:focus { border-color: var(--blue); }
+    .search-btn {
+      padding: 7px 12px;
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .search-btn:hover { opacity: .85; }
+
+    .history-list { flex: 1; overflow-y: auto; padding: 6px 8px; }
+    .history-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 10px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      margin-bottom: 2px;
+      border: 0.5px solid transparent;
+      transition: background .12s;
+    }
+    .history-item:hover { background: var(--surface2); }
+    .history-item.active { background: var(--surface2); border-color: var(--border2); }
+    .history-plate { font-size: 13px; font-weight: 600; letter-spacing: .05em; }
+    .history-meta  { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── RIGHT PANEL ── */
+    .right {
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 20px;
+      gap: 16px;
+    }
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: var(--hint);
+    }
+    .empty-icon { font-size: 32px; opacity: .5; }
+    .empty-title { font-size: 14px; font-weight: 500; }
+    .empty-sub   { font-size: 12px; }
+
+    /* Loading */
+    .loader { flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--muted); font-size: 13px; }
+    .spinner { width: 18px; height: 18px; border: 2px solid var(--border2); border-top-color: var(--blue); border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Error */
+    .error-banner { background: var(--red-bg); color: var(--red-txt); border-radius: var(--radius); padding: 10px 14px; font-size: 12px; }
+    .setup-notice { background: var(--amber-bg); color: var(--amber-txt); border-radius: var(--radius); padding: 15px; font-size: 13px; line-height: 1.6; max-width: 500px; margin: auto; text-align: center; border: 1px solid rgba(0,0,0,0.1); }
+    
+    /* ── DASHBOARD ── */
+    .dash-header { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+    .dash-plate { font-size: 20px; font-weight: 700; letter-spacing: .08em; }
+    .dash-sub   { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .status-pill { font-size: 12px; font-weight: 500; padding: 4px 12px; border-radius: 99px; }
+    .pill-green  { background: var(--green-bg); color: var(--green-txt); }
+    .pill-amber  { background: var(--amber-bg); color: var(--amber-txt); }
+    .pill-red    { background: var(--red-bg);   color: var(--red-txt);   }
+
+    .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+    .metric { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+    .metric-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 6px; }
+    .metric-val   { font-size: 22px; font-weight: 600; }
+    .metric-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    .chart-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 16px 18px; flex: 1; }
+    .chart-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+    .chart-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+    .legend { display: flex; gap: 12px; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
+    .legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+
+    /* ── DATA TABLE ── */
+    .table-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+    .table-card-header { padding: 12px 16px; border-bottom: 0.5px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .table-card-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th { padding: 8px 12px; text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); border-bottom: 0.5px solid var(--border); white-space: nowrap; background: var(--surface2); }
+    td { padding: 8px 12px; border-bottom: 0.5px solid var(--border); vertical-align: middle; white-space: nowrap; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface2); }
+    .td-volt { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+    .tag { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 99px; font-weight: 500; }
+    .tag-green { background: var(--green-bg); color: var(--green-txt); }
+    .tag-amber { background: var(--amber-bg); color: var(--amber-txt); }
+    .tag-red   { background: var(--red-bg);   color: var(--red-txt);   }
+    .tag-gray  { background: var(--surface2); color: var(--muted); }
+    .ext-link { color: var(--blue); text-decoration: none; font-size: 11px; }
+    .ext-link:hover { text-decoration: underline; }
+
+    @media (max-width: 640px) {
+      .layout { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+      .left { height: auto; max-height: 220px; border-right: none; border-bottom: 0.5px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-title">Painel Bateria <span>/ Rastreador</span></div>
+  <div class="status-badge">🟢 Conectado via App Script</div>
+</div>
+
+<div class="layout">
+  <div class="left">
+    <div class="left-header">
+      <div class="section-label">Buscar placa</div>
+      <div class="plate-search-wrap">
+        <input class="plate-input" id="plateInput" type="text" placeholder="ABC1D23" maxlength="8" onkeydown="if(event.key==='Enter') doSearch()" />
+        <button class="search-btn" id="searchBtn" onclick="doSearch()">Buscar</button>
+      </div>
+    </div>
+    <div class="history-list" id="historyList"></div>
+  </div>
+
+  <div class="right" id="rightPanel">
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">🔋</div>
+      <div class="empty-title">Pronto para buscar</div>
+      <div class="empty-sub">Digite uma placa no menu lateral para visualizar.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// =========================================================================
+// 🔴 A SUA PONTE JÁ ESTÁ CONFIGURADA AQUI ABAIXO:
+// =========================================================================
+const URL_DA_PONTE = "https://script.google.com/a/macros/kovi.com.br/s/AKfycbx0HfbyePhgzhmokkQ3lYvR5nt1HNadzcjBJ-Q1oErJhnuVlV6S004UjpxQI28oHy9P/exec";
+
+// ═══════════════════════════════════════════
+//  HISTORY
+// ═══════════════════════════════════════════
+const MAX_HISTORY = 20;
+let history = [];
+let currentPlate = null;
+let chartInst = null;
+
+function loadHistory() {
+  try { history = JSON.parse(localStorage.getItem('mb_plate_history') || '[]'); } catch { history = []; }
+  renderHistory();
+}
+function saveHistory() {
+  localStorage.setItem('mb_plate_history', JSON.stringify(history));
+}
+function addToHistory(plate, lastVolt) {
+  history = history.filter(h => h.plate !== plate);
+  history.unshift({ plate, lastVolt, ts: new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) });
+  if (history.length > MAX_HISTORY) history = history.slice(0, MAX_HISTORY);
+  saveHistory();
+  renderHistory();
+}
+function renderHistory() {
+  const el = document.getElementById('historyList');
+  if (!history.length) {
+    el.innerHTML = `<div style="padding:20px 10px; font-size:12px; color:var(--hint); text-align:center;">Pesquisas recentes<br>aparecerão aqui</div>`;
+    return;
+  }
+  el.innerHTML = history.map(h => {
+    const st = voltStatus(h.lastVolt);
+    const act = h.plate === currentPlate ? ' active' : '';
+    return `<div class="history-item${act}" onclick="loadPlate('${h.plate}')">
+      <div>
+        <div class="history-plate">${h.plate}</div>
+        <div class="history-meta">${h.lastVolt != null ? h.lastVolt.toFixed(2)+' V · ' : ''}${h.ts}</div>
+      </div>
+      <div class="status-dot" style="background:${st.dot}"></div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════
+//  STATUS HELPERS
+// ═══════════════════════════════════════════
+function voltStatus(v) {
+  if (v == null) return { pill:'pill-gray', dot:'var(--hint)', label:'Sem dados', emoji:'⚪' };
+  if (v >= 11)   return { pill:'pill-green', dot:'var(--green-dot)', label:'Rastreador Conectado', emoji:'🟢' };
+  if (v >= 7)    return { pill:'pill-amber', dot:'var(--amber-dot)', label:'Possível Desconexão',  emoji:'🟡' };
+  return         { pill:'pill-red',   dot:'var(--red-dot)',   label:'Rastreador Desconectado', emoji:'🔴' };
+}
+
+// ═══════════════════════════════════════════
+//  PONTE API (BUSCA VIA APPS SCRIPT)
+// ═══════════════════════════════════════════
+async function queryViaPonte(plate) {
+  const res = await fetch(`${URL_DA_PONTE}?placa=${plate}`);
+  if (!res.ok) throw new Error(`Erro de comunicação com a Ponte (${res.status})`);
+  const json = await res.json();
+  if (json.erro) throw new Error(json.erro);
+  return json;
+}
+
+// Como o Metabase via JSON retorna direto os objetos, nós filtramos aqui:
+function parseRows(dataArray) {
+  return dataArray.map(r => ({
+    placa:    r['Placa'] || r['placa'] || null,
+    hora:     r['Hora do evento'] || r['hora'] || null,
+    tensao:   r['Tensão Bateria:'] ? parseFloat(r['Tensão Bateria:']) : null,
+    rastr:    r['Rastreador:'] || null,
+    ignição:  r['Ignicao:'] || r['ignicao'] || null,
+    mov:      r['Movimentando:'] || null,
+    evento:   r['Evento'] || null,
+    sinalGPS: r['Sinal GPS:'] || null,
+    sinalGSM: r['Qualidade do Sinal:'] || null,
+    delay:    r['delay'] || null,
+    maps:     r['maps'] || null,
+    vel:      r['Velocidade:'] || null,
+  }));
+}
+
+// ═══════════════════════════════════════════
+//  SEARCH & RENDER
+// ═══════════════════════════════════════════
+async function doSearch() {
+  const plate = document.getElementById('plateInput').value.trim().toUpperCase();
+  if (!plate) return;
+  await loadPlate(plate);
+}
+
+async function loadPlate(plate) {
+  const right = document.getElementById('rightPanel');
+
+  // Trava de segurança se esquecer a URL
+  if (!URL_DA_PONTE || URL_DA_PONTE.includes("COLE_AQUI")) {
+    right.innerHTML = `
+      <div class="setup-notice">
+        <strong>⚠️ Link da Ponte não encontrado!</strong><br><br>
+        Abra o arquivo HTML em um bloco de notas e cole o link do seu "App da Web" gerado no Apps Script na variável <strong>URL_DA_PONTE</strong> (linha 270).
+      </div>`;
+    return;
+  }
+
+  currentPlate = plate;
+  document.getElementById('plateInput').value = plate;
+  renderHistory();
+
+  right.innerHTML = `<div class="loader"><div class="spinner"></div> Buscando placa ${plate} via Ponte Segura...</div>`;
+
+  let rows;
+  try {
+    const data = await queryViaPonte(plate);
+    rows = parseRows(data);
+  } catch(e) {
+    right.innerHTML = `<div class="error-banner visible" style="margin-top:20px;">❌ Falha: ${e.message}</div>`;
+    return;
+  }
+
+  if (!rows || !rows.length) {
+    right.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🔍</div>
+        <div class="empty-title">Nenhum dado encontrado</div>
+        <div class="empty-sub">A placa <strong>${plate}</strong> não retornou registros no momento.</div>
+      </div>`;
+    addToHistory(plate, null);
+    return;
+  }
+
+  const chronRows = [...rows].reverse();
+  const voltages = chronRows.map(r => r.tensao);
+  const lastVolt  = rows[0].tensao;
+  const maxV      = Math.max(...voltages.filter(v => v != null));
+  const minV      = Math.min(...voltages.filter(v => v != null));
+  const st        = voltStatus(lastVolt);
+
+  const t0 = new Date(chronRows[0].hora);
+  const xLabels = chronRows.map(r => {
+    const dt = Math.round((new Date(r.hora) - t0) / 60000);
+    return dt + ' min';
+  });
+  const pointColors = voltages.map(v =>
+    v == null ? '#8e8d88' : v >= 11 ? '#3b6d11' : v >= 7 ? '#ba7517' : '#a32d2d'
+  );
+
+  addToHistory(plate, lastVolt);
+
+  right.innerHTML = `
+    <div class="dash-header">
+      <div>
+        <div class="dash-plate">${plate}</div>
+        <div class="dash-sub">${rows.length} registros &nbsp;·&nbsp; ${rows[rows.length-1]?.hora?.slice(0,10) || ''} → ${rows[0]?.hora?.slice(0,10) || ''}</div>
+      </div>
+      <span class="status-pill ${st.pill}">${st.emoji} ${st.label}</span>
+    </div>
+
+    <div class="metrics">
+      <div class="metric"><div class="metric-label">Tensão atual</div><div class="metric-val">${lastVolt != null ? lastVolt.toFixed(2) : '—'} V</div><div class="metric-sub">${rows[0]?.hora?.slice(11,19) || ''}</div></div>
+      <div class="metric"><div class="metric-label">Máx. no período</div><div class="metric-val">${isFinite(maxV) ? maxV.toFixed(2) : '—'} V</div></div>
+      <div class="metric"><div class="metric-label">Mín. no período</div><div class="metric-val">${isFinite(minV) ? minV.toFixed(2) : '—'} V</div></div>
+      <div class="metric"><div class="metric-label">Total eventos</div><div class="metric-val">${rows.length}</div></div>
+      <div class="metric"><div class="metric-label">Ignição</div><div class="metric-val" style="font-size:15px;">${rows[0]?.ignição || '—'}</div></div>
+      <div class="metric"><div class="metric-label">Movimentação</div><div class="metric-val" style="font-size:14px;">${rows[0]?.mov || '—'}</div></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-top">
+        <div class="chart-title">Tempo (min) × Tensão (V)</div>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--green-dot)"></div>≥ 11V Conectado</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--amber-dot)"></div>7–11V Alerta</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--red-dot)"></div>&lt; 7V Desconectado</div>
+        </div>
+      </div>
+      <div style="position:relative; width:100%; height:280px;">
+        <canvas id="voltChart"></canvas>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-card-header"><div class="table-card-title">Histórico de eventos</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Hora</th><th>Tensão Bat.</th><th>Rastreador</th><th>Ignição</th><th>Mov.</th><th>Evento</th><th>GPS</th><th>GSM</th><th>Vel.</th><th>Delay</th><th>Mapa</th></tr>
+          </thead>
+          <tbody id="evtBody"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  const tbody = document.getElementById('evtBody');
+  const displayRows = rows.slice(0, 200);
+  tbody.innerHTML = displayRows.map(r => {
+    const vCls = r.tensao == null ? 'tag-gray' : r.tensao >= 11 ? 'tag-green' : r.tensao >= 7 ? 'tag-amber' : 'tag-red';
+    return `<tr>
+      <td>${r.hora?.slice(11,19) || r.hora || '—'}</td>
+      <td class="td-volt"><span class="tag ${vCls}">${r.tensao != null ? r.tensao.toFixed(2)+' V' : '—'}</span></td>
+      <td style="font-size:11px;">${r.rastr || '—'}</td>
+      <td>${r.ignição || '—'}</td>
+      <td>${r.mov || '—'}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;">${r.evento || '—'}</td>
+      <td>${r.sinalGPS || '—'}</td>
+      <td>${r.sinalGSM || '—'}</td>
+      <td>${r.vel != null ? r.vel+' km/h' : '—'}</td>
+      <td>${r.delay != null ? r.delay+' min' : '—'}</td>
+      <td>${r.maps ? `<a class="ext-link" href="${r.maps}" target="_blank">🗺 Ver</a>` : '—'}</td>
+    </tr>`;
+  }).join('');
+
+  if (chartInst) { chartInst.destroy(); chartInst = null; }
+  const isDark   = matchMedia('(prefers-color-scheme: dark)').matches;
+  const gridClr  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
+  const lblClr   = isDark ? '#b4b2a9' : '#5f5e5a';
+
+  chartInst = new Chart(document.getElementById('voltChart'), {
+    type: 'line',
+    data: {
+      labels: xLabels,
+      datasets: [{
+        label: 'Tensão (V)', data: voltages, borderColor: '#185fa5', borderWidth: 2, tension: 0.3, fill: false, pointBackgroundColor: pointColors, pointBorderColor: pointColors,
+        pointRadius: voltages.length <= 60 ? 4 : voltages.length <= 200 ? 2 : 1, pointHoverRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: ctx => chronRows[ctx[0].dataIndex]?.hora || '',
+            label: ctx => ' Tensão: ' + (ctx.parsed.y != null ? ctx.parsed.y.toFixed(2) : '—') + ' V',
+            afterLabel: ctx => {
+              const r = chronRows[ctx.dataIndex];
+              return [' Ignição: ' + (r?.ignição || '—'), ' Mov.: ' + (r?.mov || '—'), ' Evento: ' + (r?.evento || '—')].join('\n');
+            }
+          }
+        }
+      },
+      scales: {
+        x: { grid: { color: gridClr }, ticks: { color: lblClr, font: { size: 10 }, maxRotation: 40, autoSkip: true, maxTicksLimit: 18 } },
+        y: { min: isFinite(minV) ? Math.max(0, minV - 0.5) : 0, max: isFinite(maxV) ? maxV + 0.5 : 14, grid: { color: gridClr }, ticks: { color: lblClr, font: { size: 11 }, callback: v => v.toFixed(1) + ' V' } }
+      }
+    }
+  });
+}
+
+loadHistory();
+</script>
+</body>
+</html>
