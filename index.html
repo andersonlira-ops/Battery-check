@@ -159,12 +159,13 @@
 
   <script>
     // =========================================================
-    // 🔴 COLE AQUI O LINK NOVO GERADO NO GOOGLE APPS SCRIPT 
+    // 🔴 LINK GERADO NO GOOGLE APPS SCRIPT 
     // =========================================================
     const URL_API = "https://script.google.com/macros/s/AKfycbz27fNRRsPI2tLeb9Vrffgcfk4lzsXFzdEcMXkzlmgOQB8ep7CT9YEYiT-cnZ0jwhEJzg/exec";
 
     let carrosGlobal = [];
 
+    // Função que busca os dados no Google
     async function carregarDados() {
       const grid = document.getElementById('grid');
       const loader = document.getElementById('loader');
@@ -173,7 +174,6 @@
       loader.style.display = 'flex';
 
       try {
-        // Usa fetch normal, omitindo cookies para evitar bloqueio da conta Kovi
         const response = await fetch(URL_API, {
           method: 'GET',
           headers: {
@@ -181,7 +181,6 @@
           }
         });
 
-        // Se a resposta for redirecionada pelo Google (o que ele faz por segurança), nós seguimos
         if (!response.ok) {
            throw new Error(`Erro de rede: ${response.status}`);
         }
@@ -204,13 +203,51 @@
           <div style="color:var(--neon-red); text-align:center;">
              <p>ERRO DE CONEXÃO.</p>
              <p style="font-size:12px; color:#666; margin-top:10px;">
-                Abra a aba "Network" no Console (F12) para ver o bloqueio exato.
+                Tente atualizar a página ou verificar o link do Script.
              </p>
           </div>
         `;
       }
     }
 
+    // A FUNÇÃO QUE FALTAVA: Desenha os cards na tela
+    function renderizarCards(carros) {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+
+      if (carros.length === 0) {
+        grid.innerHTML = '<div style="color:#666; text-align:center; width:100%; grid-column: 1 / -1;">Nenhum veículo encontrado.</div>';
+        return;
+      }
+
+      carros.forEach(carro => {
+        // Cria o card base
+        const card = document.createElement('div');
+        // Adiciona a classe 'vendido' ou 'disp' dependendo do status do carro
+        card.className = 'card ' + (carro.vendido ? 'vendido' : 'disp');
+
+        // Preenche o HTML do card com as variáveis
+        card.innerHTML = `
+          ${carro.vendido ? '<div class="alerta-badge">VENDIDO</div>' : ''}
+          <div class="card-placa">${carro.placa}</div>
+          <div class="card-modelo">${carro.modelo}</div>
+          
+          <div class="info-row">
+            <span class="info-label">Bateria</span>
+            <span class="info-val">${carro.bateria}V</span>
+          </div>
+          
+          <div class="info-row">
+            <span class="info-label">Local</span>
+            <span class="info-val">${carro.local}</span>
+          </div>
+        `;
+        
+        grid.appendChild(card);
+      });
+    }
+
+    // Atualiza os contadores do Header
     function atualizarStats() {
       const total = carrosGlobal.length;
       const vendidos = carrosGlobal.filter(c => c.vendido).length;
@@ -221,17 +258,21 @@
       document.getElementById('st-vendidos').innerText = vendidos;
     }
 
+    // Filtra ao digitar na barra de busca
     function filtrarCards() {
       const termo = document.getElementById('busca').value.toUpperCase().trim();
       if (!termo) {
         renderizarCards(carrosGlobal);
         return;
       }
-      const filtrados = carrosGlobal.filter(c => c.placa.includes(termo));
+      const filtrados = carrosGlobal.filter(c => 
+        c.placa.includes(termo) || 
+        c.modelo.toUpperCase().includes(termo)
+      );
       renderizarCards(filtrados);
     }
 
-    // Inicia ao abrir a página
+    // Inicia a busca automática ao abrir a página
     window.onload = carregarDados;
   </script>
 </body>
