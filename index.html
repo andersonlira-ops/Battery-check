@@ -3,547 +3,1347 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Painel — Tensão Bateria</title>
+  <title>ASB — Monitor de Bateria</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
   <style>
     :root {
-      --bg:       #f5f4f0;
-      --surface:  #ffffff;
-      --surface2: #f1f0ec;
-      --border:   rgba(0,0,0,0.10);
-      --border2:  rgba(0,0,0,0.18);
-      --text:     #1a1a18;
-      --muted:    #5f5e5a;
-      --hint:     #8e8d88;
-      --radius:   8px;
-      --radius-lg:12px;
-      --green-bg: #eaf3de; --green-txt: #27500a; --green-dot: #3b6d11;
-      --amber-bg: #faeeda; --amber-txt: #633806; --amber-dot: #ba7517;
-      --red-bg:   #fcebeb; --red-txt:   #791f1f; --red-dot:   #a32d2d;
-      --blue:     #185fa5;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg:       #1c1c1a;
-        --surface:  #252523;
-        --surface2: #1f1f1d;
-        --border:   rgba(255,255,255,0.09);
-        --border2:  rgba(255,255,255,0.16);
-        --text:     #e8e7e2;
-        --muted:    #b4b2a9;
-        --hint:     #6e6d68;
-        --green-bg: #173404; --green-txt: #c0dd97; --green-dot: #639922;
-        --amber-bg: #412402; --amber-txt: #fac775; --amber-dot: #ef9f27;
-        --red-bg:   #501313; --red-txt:   #f7c1c1; --red-dot:   #e24b4a;
-        --blue:     #85b7eb;
-      }
+      --bg:        #0f1117;
+      --surface:   #181b24;
+      --surface2:  #1e2130;
+      --surface3:  #252840;
+      --border:    rgba(255,255,255,0.07);
+      --border2:   rgba(255,255,255,0.13);
+      --text:      #e4e5f0;
+      --muted:     #8b8fa8;
+      --hint:      #4c506a;
+
+      --green:     #22c55e;
+      --green-bg:  rgba(34,197,94,0.12);
+      --green-txt: #86efac;
+
+      --amber:     #f59e0b;
+      --amber-bg:  rgba(245,158,11,0.12);
+      --amber-txt: #fcd34d;
+
+      --red:       #ef4444;
+      --red-bg:    rgba(239,68,68,0.12);
+      --red-txt:   #fca5a5;
+
+      --blue:      #6366f1;
+      --blue-bg:   rgba(99,102,241,0.15);
+      --blue-txt:  #a5b4fc;
+      --blue-border: rgba(99,102,241,0.4);
+
+      --mono:      'IBM Plex Mono', monospace;
+      --sans:      'IBM Plex Sans', sans-serif;
+
+      --r:   6px;
+      --rlg: 10px;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: var(--sans);
       background: var(--bg);
       color: var(--text);
-      font-size: 14px;
+      font-size: 13px;
       line-height: 1.5;
-      min-height: 100vh;
     }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
 
     /* ── TOP BAR ── */
     .topbar {
+      height: 48px;
       background: var(--surface);
-      border-bottom: 0.5px solid var(--border2);
-      padding: 0 20px;
-      height: 52px;
+      border-bottom: 1px solid var(--border);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 16px;
-      position: sticky;
-      top: 0;
-      z-index: 100;
+      padding: 0 16px;
+      gap: 12px;
+      flex-shrink: 0;
     }
-    .topbar-title {
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: -.01em;
-      white-space: nowrap;
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
-    .topbar-title span { color: var(--muted); font-weight: 400; }
-    
-    .status-badge {
+    .brand-tag {
+      font-family: var(--mono);
       font-size: 11px;
-      background: var(--green-bg);
-      color: var(--green-txt);
-      padding: 4px 10px;
+      font-weight: 600;
+      letter-spacing: .1em;
+      background: var(--blue-bg);
+      color: var(--blue-txt);
+      border: 1px solid var(--blue-border);
+      padding: 3px 8px;
+      border-radius: var(--r);
+    }
+    .brand-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -.01em;
+    }
+    .brand-title span { color: var(--muted); font-weight: 400; }
+    .topbar-right { display: flex; align-items: center; gap: 8px; }
+    .last-update-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--hint);
+    }
+    .conn-badge {
+      font-size: 11px;
+      padding: 3px 9px;
       border-radius: 99px;
       font-weight: 500;
+      letter-spacing: .02em;
     }
+    .conn-ok  { background: var(--green-bg); color: var(--green-txt); border: 1px solid rgba(34,197,94,.2); }
+    .conn-err { background: var(--red-bg);   color: var(--red-txt);   border: 1px solid rgba(239,68,68,.2); }
 
-    /* ── LAYOUT ── */
-    .layout {
+    .refresh-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 13px;
+      background: var(--blue-bg);
+      color: var(--blue-txt);
+      border: 1px solid var(--blue-border);
+      border-radius: var(--r);
+      font-size: 12px;
+      font-weight: 500;
+      font-family: var(--sans);
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+    .refresh-btn:hover:not(:disabled) { opacity: .8; }
+    .refresh-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .spin-icon {
+      width: 12px; height: 12px;
+      border: 2px solid rgba(165,180,252,.3);
+      border-top-color: var(--blue-txt);
+      border-radius: 50%;
+      display: none;
+    }
+    .spin-icon.spinning { display: block; animation: spin .6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── MAIN LAYOUT ── */
+    .app {
       display: grid;
-      grid-template-columns: 240px minmax(0,1fr);
-      gap: 0;
-      height: calc(100vh - 52px);
+      grid-template-columns: 240px 1fr;
+      height: calc(100vh - 48px);
     }
 
-    /* ── LEFT PANEL ── */
-    .left {
+    /* ── LEFT SIDEBAR ── */
+    .sidebar {
       background: var(--surface);
-      border-right: 0.5px solid var(--border);
+      border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
       overflow: hidden;
     }
-    .left-header { padding: 14px 14px 10px; border-bottom: 0.5px solid var(--border); }
-    .section-label { font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--hint); margin-bottom: 8px; }
-    .plate-search-wrap { display: flex; gap: 6px; }
-    .plate-input {
-      flex: 1;
-      padding: 7px 10px;
-      font-size: 13px;
-      background: var(--surface2);
-      border: 0.5px solid var(--border2);
-      border-radius: var(--radius);
-      color: var(--text);
-      outline: none;
-      text-transform: uppercase;
-      letter-spacing: .06em;
+    .sidebar-head {
+      padding: 10px 10px 8px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
     }
-    .plate-input:focus { border-color: var(--blue); }
-    .search-btn {
-      padding: 7px 12px;
-      background: var(--blue);
-      color: #fff;
-      border: none;
-      border-radius: var(--radius);
-      font-size: 12px;
-      font-weight: 500;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .search-btn:hover { opacity: .85; }
-
-    .history-list { flex: 1; overflow-y: auto; padding: 6px 8px; }
-    .history-item {
+    .sidebar-meta {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 9px 10px;
-      border-radius: var(--radius);
-      cursor: pointer;
-      margin-bottom: 2px;
-      border: 0.5px solid transparent;
-      transition: background .12s;
+      margin-bottom: 7px;
     }
-    .history-item:hover { background: var(--surface2); }
-    .history-item.active { background: var(--surface2); border-color: var(--border2); }
-    .history-plate { font-size: 13px; font-weight: 600; letter-spacing: .05em; }
-    .history-meta  { font-size: 11px; color: var(--muted); margin-top: 1px; }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .sidebar-label {
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--hint);
+    }
+    .plate-count-badge {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      background: var(--surface2);
+      padding: 1px 7px;
+      border-radius: 99px;
+      border: 1px solid var(--border);
+    }
+    .filter-wrap { position: relative; }
+    .filter-icon {
+      position: absolute;
+      left: 8px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 11px;
+      pointer-events: none;
+      opacity: .5;
+    }
+    .filter-input {
+      width: 100%;
+      padding: 6px 8px 6px 26px;
+      font-size: 12px;
+      font-family: var(--mono);
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: var(--r);
+      color: var(--text);
+      outline: none;
+    }
+    .filter-input:focus { border-color: var(--blue-border); }
+    .filter-input::placeholder { text-transform: none; letter-spacing: 0; color: var(--hint); font-family: var(--sans); }
+
+    .plate-list { flex: 1; overflow-y: auto; padding: 4px; }
+
+    /* skeleton loader */
+    .skel-item {
+      height: 52px;
+      background: linear-gradient(90deg, var(--surface2) 25%, var(--surface3) 50%, var(--surface2) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: var(--r);
+      margin-bottom: 3px;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    .plate-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 9px;
+      border-radius: var(--r);
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: background .1s, border-color .1s;
+      margin-bottom: 2px;
+    }
+    .plate-item:hover { background: var(--surface2); }
+    .plate-item.active {
+      background: var(--surface2);
+      border-color: var(--border2);
+    }
+    .plate-item.active .plate-code { color: var(--blue-txt); }
+    .plate-code {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .06em;
+      color: var(--text);
+    }
+    .plate-sub {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 1px;
+      font-family: var(--mono);
+    }
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dot-green { background: var(--green); box-shadow: 0 0 6px rgba(34,197,94,.5); }
+    .dot-amber { background: var(--amber); }
+    .dot-red   { background: var(--red);   }
+    .dot-gray  { background: var(--hint);  }
 
     /* ── RIGHT PANEL ── */
-    .right {
-      background: var(--bg);
+    .main {
       display: flex;
       flex-direction: column;
-      overflow-y: auto;
-      padding: 20px;
-      gap: 16px;
+      overflow: hidden;
+      background: var(--bg);
     }
+
+    /* ── TAB BAR ── */
+    .tabbar {
+      display: flex;
+      align-items: stretch;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 16px;
+      flex-shrink: 0;
+    }
+    .tab-btn {
+      padding: 0 16px;
+      height: 40px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--muted);
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: color .15s, border-color .15s;
+      white-space: nowrap;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--blue-txt); border-bottom-color: var(--blue); }
+    .tab-pill {
+      font-family: var(--mono);
+      font-size: 10px;
+      background: var(--amber-bg);
+      color: var(--amber-txt);
+      border: 1px solid rgba(245,158,11,.2);
+      padding: 1px 6px;
+      border-radius: 99px;
+      font-weight: 600;
+    }
+
+    /* ── TAB CONTENT ── */
+    .tab-pane { display: none; flex: 1; overflow-y: auto; padding: 16px; }
+    .tab-pane.active { display: block; }
+
+    /* ── EMPTY / LOADER STATES ── */
     .empty-state {
-      flex: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 10px;
+      min-height: 280px;
+      gap: 8px;
       color: var(--hint);
     }
-    .empty-icon { font-size: 32px; opacity: .5; }
-    .empty-title { font-size: 14px; font-weight: 500; }
-    .empty-sub   { font-size: 12px; }
+    .empty-icon { font-size: 28px; opacity: .5; margin-bottom: 4px; }
+    .empty-title { font-size: 14px; font-weight: 600; color: var(--muted); }
+    .empty-sub { font-size: 12px; text-align: center; max-width: 300px; }
+    .loader-row { display: flex; align-items: center; justify-content: center; min-height: 200px; gap: 10px; color: var(--muted); font-size: 12px; }
+    .loader-spinner { width: 16px; height: 16px; border: 2px solid var(--border2); border-top-color: var(--blue); border-radius: 50%; animation: spin .6s linear infinite; }
+    .error-box { background: var(--red-bg); border: 1px solid rgba(239,68,68,.2); border-radius: var(--rlg); padding: 12px 14px; font-size: 12px; color: var(--red-txt); margin-bottom: 12px; }
 
-    /* Loading */
-    .loader { flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--muted); font-size: 13px; }
-    .spinner { width: 18px; height: 18px; border: 2px solid var(--border2); border-top-color: var(--blue); border-radius: 50%; animation: spin .7s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* Error */
-    .error-banner { background: var(--red-bg); color: var(--red-txt); border-radius: var(--radius); padding: 10px 14px; font-size: 12px; }
-    .setup-notice { background: var(--amber-bg); color: var(--amber-txt); border-radius: var(--radius); padding: 15px; font-size: 13px; line-height: 1.6; max-width: 500px; margin: auto; text-align: center; border: 1px solid rgba(0,0,0,0.1); }
-    
-    /* ── DASHBOARD ── */
-    .dash-header { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
-    .dash-plate { font-size: 20px; font-weight: 700; letter-spacing: .08em; }
-    .dash-sub   { font-size: 12px; color: var(--muted); margin-top: 2px; }
-    .status-pill { font-size: 12px; font-weight: 500; padding: 4px 12px; border-radius: 99px; }
-    .pill-green  { background: var(--green-bg); color: var(--green-txt); }
-    .pill-amber  { background: var(--amber-bg); color: var(--amber-txt); }
-    .pill-red    { background: var(--red-bg);   color: var(--red-txt);   }
-
-    .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
-    .metric { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
-    .metric-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 6px; }
-    .metric-val   { font-size: 22px; font-weight: 600; }
-    .metric-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
-
-    .chart-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 16px 18px; flex: 1; }
-    .chart-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
-    .chart-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
-    .legend { display: flex; gap: 12px; flex-wrap: wrap; }
-    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
-    .legend-dot { width: 8px; height: 8px; border-radius: 2px; }
-
-    /* ── DATA TABLE ── */
-    .table-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
-    .table-card-header { padding: 12px 16px; border-bottom: 0.5px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-    .table-card-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    th { padding: 8px 12px; text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); border-bottom: 0.5px solid var(--border); white-space: nowrap; background: var(--surface2); }
-    td { padding: 8px 12px; border-bottom: 0.5px solid var(--border); vertical-align: middle; white-space: nowrap; }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: var(--surface2); }
-    .td-volt { font-weight: 600; font-variant-numeric: tabular-nums; }
-
-    .tag { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 99px; font-weight: 500; }
-    .tag-green { background: var(--green-bg); color: var(--green-txt); }
-    .tag-amber { background: var(--amber-bg); color: var(--amber-txt); }
-    .tag-red   { background: var(--red-bg);   color: var(--red-txt);   }
-    .tag-gray  { background: var(--surface2); color: var(--muted); }
-    .ext-link { color: var(--blue); text-decoration: none; font-size: 11px; }
-    .ext-link:hover { text-decoration: underline; }
-
-    /* ── CAIXA DE ROLAGEM TABELA (NOVO) ── */
-    .caixa-rolagem-tabela {
-      max-height: 400px;
-      overflow-y: auto;
+    /* ── DASH HEADER ── */
+    .dash-header {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--rlg);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
     }
-    .caixa-rolagem-tabela thead th {
+    .dash-plate {
+      font-family: var(--mono);
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: .1em;
+      color: var(--text);
+    }
+    .dash-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .status-pill {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 4px 11px;
+      border-radius: 99px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .pill-green { background: var(--green-bg); color: var(--green-txt); border: 1px solid rgba(34,197,94,.2); }
+    .pill-amber { background: var(--amber-bg); color: var(--amber-txt); border: 1px solid rgba(245,158,11,.2); }
+    .pill-red   { background: var(--red-bg);   color: var(--red-txt);   border: 1px solid rgba(239,68,68,.2); }
+    .pill-gray  { background: var(--surface2); color: var(--muted); border: 1px solid var(--border2); }
+
+    /* ── METRICS GRID ── */
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .metric {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 10px 12px;
+    }
+    .metric-label {
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--hint);
+      margin-bottom: 5px;
+    }
+    .metric-val {
+      font-family: var(--mono);
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .metric-val.sm { font-size: 14px; margin-top: 2px; }
+    .metric-sub { font-size: 10px; color: var(--muted); margin-top: 2px; font-family: var(--mono); }
+
+    /* ── CHART ── */
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--rlg);
+      padding: 14px 16px;
+      margin-bottom: 12px;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .card-title {
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--hint);
+    }
+    .legend { display: flex; gap: 12px; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--muted); font-family: var(--mono); }
+    .legend-dot { width: 7px; height: 7px; border-radius: 2px; flex-shrink: 0; }
+
+    /* ── TABLE ── */
+    .table-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--rlg);
+      overflow: hidden;
+    }
+    .table-card-head {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .table-wrap { overflow-x: auto; max-height: 320px; overflow-y: auto; }
+    .table-wrap thead th {
       position: sticky;
       top: 0;
-      z-index: 10;
+      z-index: 5;
+      background: var(--surface2);
       box-shadow: 0 1px 0 var(--border);
     }
-
-    @media (max-width: 640px) {
-      .layout { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
-      .left { height: auto; max-height: 220px; border-right: none; border-bottom: 0.5px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      padding: 7px 10px;
+      text-align: left;
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--hint);
+      white-space: nowrap;
     }
+    td {
+      padding: 7px 10px;
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      white-space: nowrap;
+      vertical-align: middle;
+      color: var(--text);
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface2); }
+    .td-volt { font-family: var(--mono); font-weight: 600; }
+
+    .vtag {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+    .vtag-green { background: var(--green-bg); color: var(--green-txt); }
+    .vtag-amber { background: var(--amber-bg); color: var(--amber-txt); }
+    .vtag-red   { background: var(--red-bg);   color: var(--red-txt);   }
+    .vtag-gray  { background: var(--surface2); color: var(--muted); border: 1px solid var(--border2); }
+    .ext-link { color: var(--blue-txt); text-decoration: none; font-size: 10px; }
+    .ext-link:hover { text-decoration: underline; }
+
+    /* ── RECOVERY ALERT ── */
+    .recovery-alert {
+      background: linear-gradient(135deg, rgba(245,158,11,.1), rgba(245,158,11,.05));
+      border: 1px solid rgba(245,158,11,.25);
+      border-radius: var(--rlg);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .recovery-text { font-size: 12px; color: var(--amber-txt); line-height: 1.5; }
+    .recovery-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+    /* ── BUTTONS ── */
+    .btn {
+      padding: 5px 12px;
+      border: none;
+      border-radius: var(--r);
+      font-size: 11px;
+      font-weight: 500;
+      font-family: var(--sans);
+      cursor: pointer;
+      transition: opacity .15s;
+      white-space: nowrap;
+    }
+    .btn:hover { opacity: .8; }
+    .btn-amber { background: var(--amber); color: #000; }
+    .btn-blue  { background: var(--blue);  color: #fff; }
+    .btn-red   { background: var(--red);   color: #fff; }
+    .btn-ghost {
+      background: var(--surface2);
+      color: var(--muted);
+      border: 1px solid var(--border2);
+    }
+
+    /* ── TAB 2 — ACOMPANHADOS ── */
+    .tracked-topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .tracked-heading { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+    .tracked-desc { font-size: 11px; color: var(--muted); max-width: 480px; line-height: 1.5; }
+
+    .add-form {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--rlg);
+      padding: 12px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+      align-items: center;
+    }
+    .add-form-label {
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--hint);
+      white-space: nowrap;
+    }
+    .add-input {
+      padding: 6px 9px;
+      font-size: 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: var(--r);
+      color: var(--text);
+      outline: none;
+      font-family: var(--mono);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .add-input:focus { border-color: var(--blue-border); }
+    .add-input.notes {
+      flex: 1;
+      min-width: 160px;
+      text-transform: none;
+      letter-spacing: 0;
+      font-family: var(--sans);
+    }
+
+    .tracked-grid { display: grid; gap: 8px; }
+    .tracked-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--rlg);
+      padding: 12px 14px;
+      transition: border-color .15s;
+    }
+    .tracked-card:hover { border-color: var(--border2); }
+    .tracked-card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .tracked-plate {
+      font-family: var(--mono);
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: .08em;
+    }
+    .tracked-meta { font-size: 10px; color: var(--muted); font-family: var(--mono); margin-top: 2px; }
+    .tracked-actions { display: flex; gap: 5px; flex-shrink: 0; }
+    .tracked-notes-box {
+      font-size: 11px;
+      color: var(--muted);
+      background: var(--surface2);
+      border-radius: var(--r);
+      padding: 6px 9px;
+      margin-bottom: 10px;
+      font-style: italic;
+      border-left: 2px solid var(--border2);
+    }
+    .tracked-status-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .tracked-volt {
+      font-family: var(--mono);
+      font-size: 17px;
+      font-weight: 600;
+    }
+    .tracked-check {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--hint);
+    }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: var(--rlg);
+      padding: 10px 14px;
+      font-size: 12px;
+      z-index: 999;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity .2s, transform .2s;
+      pointer-events: none;
+      max-width: 280px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.4);
+    }
+    .toast.show { opacity: 1; transform: none; }
+
+    /* ── LIST EMPTY STATE ── */
+    .list-empty { padding: 20px; text-align: center; font-size: 11px; color: var(--hint); }
   </style>
 </head>
 <body>
 
+<!-- TOP BAR -->
 <div class="topbar">
-  <div class="topbar-title">Painel Bateria <span>/ Rastreador</span></div>
-  <div class="status-badge">🟢 Conectado via App Script</div>
+  <div class="topbar-brand">
+    <div class="brand-tag">ASB</div>
+    <div class="brand-title">Monitor Bateria <span>/ Frota</span></div>
+  </div>
+  <div class="topbar-right">
+    <span class="last-update-label" id="lastUpdateLabel"></span>
+    <button class="refresh-btn" id="refreshBtn" onclick="refreshAll()">
+      <div class="spin-icon" id="spinIcon"></div>
+      ↺ Atualizar
+    </button>
+    <span class="conn-badge conn-ok" id="connBadge">● Conectado</span>
+  </div>
 </div>
 
-<div class="layout">
-  <div class="left">
-    <div class="left-header">
-      <div class="section-label">Buscar placa</div>
-      <div class="plate-search-wrap">
-        <input class="plate-input" id="plateInput" type="text" placeholder="ABC1D23" maxlength="8" onkeydown="if(event.key==='Enter') doSearch()" />
-        <button class="search-btn" id="searchBtn" onclick="doSearch()">Buscar</button>
+<!-- MAIN APP -->
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-head">
+      <div class="sidebar-meta">
+        <span class="sidebar-label">Placas ativas</span>
+        <span class="plate-count-badge" id="plateCountBadge">—</span>
+      </div>
+      <div class="filter-wrap">
+        <span class="filter-icon">⌕</span>
+        <input class="filter-input" id="filterInput" type="text" placeholder="Filtrar placa..." maxlength="8" oninput="renderPlateList()" />
       </div>
     </div>
-    <div class="history-list" id="historyList"></div>
-  </div>
-
-  <div class="right" id="rightPanel">
-    <div class="empty-state" id="emptyState">
-      <div class="empty-icon">🔋</div>
-      <div class="empty-title">Pronto para buscar</div>
-      <div class="empty-sub">Digite uma placa no menu lateral para visualizar.</div>
+    <div class="plate-list" id="plateList">
+      <div class="skel-item" style="margin:4px;"></div>
+      <div class="skel-item" style="margin:4px;"></div>
+      <div class="skel-item" style="margin:4px;"></div>
+      <div class="skel-item" style="margin:4px;"></div>
+      <div class="skel-item" style="margin:4px;"></div>
     </div>
   </div>
+
+  <!-- RIGHT MAIN -->
+  <div class="main">
+    <!-- TABS -->
+    <div class="tabbar">
+      <button class="tab-btn active" id="tabBtnMonitor" onclick="switchTab('monitor')">🔋 Monitoramento</button>
+      <button class="tab-btn" id="tabBtnTracked" onclick="switchTab('tracked')">
+        📋 Acompanhados
+        <span class="tab-pill" id="trackedPill" style="display:none">0</span>
+      </button>
+    </div>
+
+    <!-- TAB 1: MONITORING -->
+    <div class="tab-pane active" id="paneMonitor">
+      <div class="empty-state">
+        <div class="empty-icon">🔋</div>
+        <div class="empty-title">Nenhuma placa selecionada</div>
+        <div class="empty-sub">Selecione uma placa na lista lateral para ver os dados das últimas 24h.</div>
+      </div>
+    </div>
+
+    <!-- TAB 2: TRACKED -->
+    <div class="tab-pane" id="paneTracked">
+      <!-- rendered by JS -->
+    </div>
+  </div>
+
 </div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
 
 <script>
-// =========================================================================
-// 🔴 A SUA PONTE JÁ ESTÁ CONFIGURADA AQUI ABAIXO:
-// =========================================================================
-const URL_DA_PONTE = "https://script.google.com/macros/s/AKfycbwm26sYIRoUtr-wl6z7SRMEmuY5GMucIJoF8DYzAD3cecdl4n24uvDM_Tp29qf4HuGSZQ/exec";
+// ═══════════════════════════════════════════════════════════════
+//  ⚙️  CONFIGURAÇÃO
+//  Sua bridge URL (Apps Script)
+//
+//  ⚠️  ADAPTAÇÃO NECESSÁRIA NO SEU APPS SCRIPT:
+//  O script precisa repassar ao Metabase os seguintes parâmetros:
+//    • placa          → filtro de placa (vazio = todos)
+//    • DATA_INICIAL   → ex: "2025-03-31 10:00:00"
+//    • DATA_FINAL     → ex: "2025-04-01 10:00:00"
+//    • ESTADO_BATERIA → pode vir múltiplos ou nenhum
+//    • sem_filtro=1   → ignora o filtro de ESTADO_BATERIA (para Acompanhados)
+// ═══════════════════════════════════════════════════════════════
+const URL_PONTE = "https://script.google.com/macros/s/AKfycbysUys1uaz_W7-QfmwZp4E3AyElncSCntWrSyHf58ad4_yjfNnE7trZiTn-fk5Q08E0XA/exec";
+const FILTROS_ESTADO = "ESTADO_BATERIA=BATERIA-TROCAR&ESTADO_BATERIA=BATERIA%20CRITICA-TROCAR";
 
-// ═══════════════════════════════════════════
-//  HISTORY
-// ═══════════════════════════════════════════
-const MAX_HISTORY = 20;
-let history = [];
-let currentPlate = null;
-let chartInst = null;
+// ═══════════════════════════════════════════════════════════════
+//  ESTADO GLOBAL
+// ═══════════════════════════════════════════════════════════════
+let allPlates      = [];   // [{placa, tensao, hora}]
+let currentPlate   = null;
+let chartInstance  = null;
+let trackedList    = [];   // persistido em localStorage
+let isRefreshing   = false;
 
-function loadHistory() {
-  try { history = JSON.parse(localStorage.getItem('mb_plate_history') || '[]'); } catch { history = []; }
-  renderHistory();
-}
-function saveHistory() {
-  localStorage.setItem('mb_plate_history', JSON.stringify(history));
-}
-function addToHistory(plate, lastVolt) {
-  history = history.filter(h => h.plate !== plate);
-  history.unshift({ plate, lastVolt, ts: new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) });
-  if (history.length > MAX_HISTORY) history = history.slice(0, MAX_HISTORY);
-  saveHistory();
-  renderHistory();
-}
-function renderHistory() {
-  const el = document.getElementById('historyList');
-  if (!history.length) {
-    el.innerHTML = `<div style="padding:20px 10px; font-size:12px; color:var(--hint); text-align:center;">Pesquisas recentes<br>aparecerão aqui</div>`;
-    return;
-  }
-  el.innerHTML = history.map(h => {
-    const st = voltStatus(h.lastVolt);
-    const act = h.plate === currentPlate ? ' active' : '';
-    return `<div class="history-item${act}" onclick="loadPlate('${h.plate}')">
-      <div>
-        <div class="history-plate">${h.plate}</div>
-        <div class="history-meta">${h.lastVolt != null ? h.lastVolt.toFixed(2)+' V · ' : ''}${h.ts}</div>
-      </div>
-      <div class="status-dot" style="background:${st.dot}"></div>
-    </div>`;
-  }).join('');
+// ═══════════════════════════════════════════════════════════════
+//  UTILITÁRIOS DE DATA
+// ═══════════════════════════════════════════════════════════════
+const pad = n => String(n).padStart(2, '0');
+
+function dtFmt(d) {
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
-// ═══════════════════════════════════════════
-//  STATUS HELPERS
-// ═══════════════════════════════════════════
+function now()     { return dtFmt(new Date()); }
+function ago24h()  { return dtFmt(new Date(Date.now() - 86_400_000)); }
+function timeOf(s) { return s ? (s.length >= 19 ? s.slice(11, 19) : s) : '—'; }
+function dtOf(s)   { return s ? s.slice(0, 16).replace('T', ' ') : '—'; }
+
+// ═══════════════════════════════════════════════════════════════
+//  STATUS
+// ═══════════════════════════════════════════════════════════════
 function voltStatus(v) {
-  if (v == null) return { pill:'pill-gray', dot:'var(--hint)', label:'Sem dados', emoji:'⚪' };
-  if (v >= 11)   return { pill:'pill-green', dot:'var(--green-dot)', label:'Rastreador Conectado', emoji:'🟢' };
-  if (v >= 7)    return { pill:'pill-amber', dot:'var(--amber-dot)', label:'Possível Desconexão',  emoji:'🟡' };
-  return         { pill:'pill-red',   dot:'var(--red-dot)',   label:'Rastreador Desconectado', emoji:'🔴' };
+  if (v == null)  return { pill:'pill-gray',  dot:'dot-gray',  label:'Sem dados',               emoji:'○' };
+  if (v >= 11)    return { pill:'pill-green', dot:'dot-green', label:'Rastreador Conectado',     emoji:'●' };
+  if (v >= 7)     return { pill:'pill-amber', dot:'dot-amber', label:'Tensão de Alerta',         emoji:'●' };
+  return                 { pill:'pill-red',   dot:'dot-red',   label:'Rastreador Desconectado',  emoji:'●' };
 }
 
-// ═══════════════════════════════════════════
-//  PONTE API (BUSCA VIA APPS SCRIPT)
-// ═══════════════════════════════════════════
-async function queryViaPonte(plate) {
-  const res = await fetch(`${URL_DA_PONTE}?placa=${plate}`);
-  if (!res.ok) throw new Error(`Erro de comunicação com a Ponte (${res.status})`);
+function vtagClass(v) {
+  if (v == null) return 'vtag-gray';
+  if (v >= 11)   return 'vtag-green';
+  if (v >= 7)    return 'vtag-amber';
+  return               'vtag-red';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PARSE DE DADOS METABASE
+// ═══════════════════════════════════════════════════════════════
+function parseRows(data) {
+  let raw = [];
+
+  if (data?.data?.rows) {
+    const cols = data.data.cols.map(c => c.display_name || c.name);
+    raw = data.data.rows.map(row => {
+      const o = {}; cols.forEach((n, i) => o[n] = row[i]); return o;
+    });
+  } else if (data?.rows && Array.isArray(data.rows)) {
+    const cols = data.cols.map(c => c.display_name || c.name);
+    raw = data.rows.map(row => {
+      const o = {}; cols.forEach((n, i) => o[n] = row[i]); return o;
+    });
+  } else if (Array.isArray(data)) {
+    raw = data;
+  }
+
+  return raw.map(r => ({
+    placa:    r['Placa']            || r['placa']    || null,
+    hora:     r['Hora do evento']   || r['hora']     || null,
+    tensao:   r['Tensão Bateria:']  != null ? parseFloat(r['Tensão Bateria:']) : null,
+    rastr:    r['Rastreador:']      || null,
+    ignicao:  r['Ignicao:']         || r['ignicao']  || null,
+    mov:      r['Movimentando:']    || null,
+    evento:   r['Evento']           || null,
+    sinalGPS: r['Sinal GPS:']       || null,
+    sinalGSM: r['Qualidade do Sinal:'] || null,
+    delay:    r['delay']            != null ? r['delay'] : null,
+    maps:     r['maps']             || null,
+    vel:      r['Velocidade:']      != null ? r['Velocidade:'] : null,
+  }));
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  BRIDGE CALLS
+// ═══════════════════════════════════════════════════════════════
+async function bridgeGet(qs) {
+  const res = await fetch(`${URL_PONTE}?${qs}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const json = await res.json();
   if (json.erro) throw new Error(json.erro);
   return json;
 }
 
-// Como o Metabase via JSON retorna direto os objetos, nós filtramos aqui:
-function parseRows(data) {
-  let rows = [];
-  
-  // Se o Metabase mandar o formato completo com colunas e linhas
-  if (data && data.data && data.data.rows) {
-    const colNames = data.data.cols.map(c => c.display_name || c.name);
-    rows = data.data.rows.map(row => {
-      let obj = {};
-      colNames.forEach((name, i) => obj[name] = row[i]);
-      return obj;
-    });
-  } 
-  // Se o Metabase mandar apenas a lista de linhas
-  else if (data && data.rows && Array.isArray(data.rows)) {
-    const colNames = data.cols.map(c => c.display_name || c.name);
-    rows = data.rows.map(row => {
-      let obj = {};
-      colNames.forEach((name, i) => obj[name] = row[i]);
-      return obj;
-    });
-  }
-  // Se já vier como uma lista simples (array)
-  else if (Array.isArray(data)) {
-    rows = data;
-  }
-
-  // Agora mapeia para os nomes que o painel usa
-  return rows.map(r => ({
-    placa:    r['Placa'] || r['placa'] || null,
-    hora:     r['Hora do evento'] || r['hora'] || null,
-    tensao:   r['Tensão Bateria:'] ? parseFloat(r['Tensão Bateria:']) : null,
-    rastr:    r['Rastreador:'] || null,
-    ignição:  r['Ignicao:'] || r['ignicao'] || null,
-    mov:      r['Movimentando:'] || null,
-    evento:   r['Evento'] || null,
-    sinalGPS: r['Sinal GPS:'] || null,
-    sinalGSM: r['Qualidade do Sinal:'] || null,
-    delay:    r['delay'] || null,
-    maps:     r['maps'] || null,
-    vel:      r['Velocidade:'] || null,
-  }));
+// Busca todas as placas (últimas 24h, filtrado por ESTADO_BATERIA)
+async function fetchAllPlates() {
+  const qs = `placa=&${FILTROS_ESTADO}&DATA_INICIAL=${encodeURIComponent(ago24h())}&DATA_FINAL=${encodeURIComponent(now())}`;
+  return bridgeGet(qs);
 }
 
-// ═══════════════════════════════════════════
-//  SEARCH & RENDER
-// ═══════════════════════════════════════════
-async function doSearch() {
-  const plate = document.getElementById('plateInput').value.trim().toUpperCase();
-  if (!plate) return;
-  await loadPlate(plate);
+// Busca detalhes de uma placa específica (últimas 24h)
+async function fetchPlate(placa) {
+  const qs = `placa=${encodeURIComponent(placa)}&DATA_INICIAL=${encodeURIComponent(ago24h())}&DATA_FINAL=${encodeURIComponent(now())}`;
+  return bridgeGet(qs);
 }
 
-async function loadPlate(plate) {
-  const right = document.getElementById('rightPanel');
+// Busca placa sem filtro de estado (para Acompanhados)
+async function fetchPlateNoFilter(placa) {
+  const qs = `placa=${encodeURIComponent(placa)}&sem_filtro=1&DATA_INICIAL=${encodeURIComponent(ago24h())}&DATA_FINAL=${encodeURIComponent(now())}`;
+  return bridgeGet(qs);
+}
 
-  // Trava de segurança se esquecer a URL
-  if (!URL_DA_PONTE || URL_DA_PONTE.includes("COLE_AQUI")) {
-    right.innerHTML = `
-      <div class="setup-notice">
-        <strong>⚠️ Link da Ponte não encontrado!</strong><br><br>
-        Abra o arquivo HTML em um bloco de notas e cole o link do seu "App da Web" gerado no Apps Script na variável <strong>URL_DA_PONTE</strong> (linha 270).
-      </div>`;
+// ═══════════════════════════════════════════════════════════════
+//  CARREGAR LISTA DE PLACAS
+// ═══════════════════════════════════════════════════════════════
+async function loadPlateList() {
+  const listEl = document.getElementById('plateList');
+  listEl.innerHTML = `
+    <div class="skel-item" style="margin:4px;"></div>
+    <div class="skel-item" style="margin:4px;"></div>
+    <div class="skel-item" style="margin:4px;"></div>
+    <div class="skel-item" style="margin:4px;"></div>
+  `;
+
+  try {
+    const data = await fetchAllPlates();
+    const rows = parseRows(data);
+
+    // Agrupar por placa → pegar evento mais recente de cada
+    const map = {};
+    rows.forEach(r => {
+      if (!r.placa) return;
+      if (!map[r.placa] || new Date(r.hora) > new Date(map[r.placa].hora)) {
+        map[r.placa] = r;
+      }
+    });
+
+    // Ordenar por tensão (mais crítica primeiro)
+    allPlates = Object.values(map).sort((a, b) => {
+      const av = a.tensao ?? 999;
+      const bv = b.tensao ?? 999;
+      return av - bv;
+    });
+
+    document.getElementById('plateCountBadge').textContent = `${allPlates.length}`;
+    document.getElementById('lastUpdateLabel').textContent = `↻ ${new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit', second:'2-digit'})}`;
+    setConnBadge(true);
+    renderPlateList();
+  } catch(e) {
+    listEl.innerHTML = `<div class="list-empty">❌ Erro ao carregar:<br>${e.message}</div>`;
+    setConnBadge(false);
+  }
+}
+
+function renderPlateList() {
+  const filter = document.getElementById('filterInput').value.trim().toUpperCase();
+  const visible = filter ? allPlates.filter(p => p.placa?.includes(filter)) : allPlates;
+  const listEl = document.getElementById('plateList');
+
+  if (!visible.length) {
+    listEl.innerHTML = `<div class="list-empty">Nenhuma placa encontrada</div>`;
     return;
   }
 
-  currentPlate = plate;
-  document.getElementById('plateInput').value = plate;
-  renderHistory();
+  listEl.innerHTML = visible.map(p => {
+    const st  = voltStatus(p.tensao);
+    const act = p.placa === currentPlate ? ' active' : '';
+    const v   = p.tensao != null ? p.tensao.toFixed(2) + ' V' : '—';
+    return `<div class="plate-item${act}" onclick="selectPlate('${p.placa}')">
+      <div>
+        <div class="plate-code">${p.placa}</div>
+        <div class="plate-sub">${v} · ${timeOf(p.hora)}</div>
+      </div>
+      <div class="status-dot ${st.dot}"></div>
+    </div>`;
+  }).join('');
+}
 
-  right.innerHTML = `<div class="loader"><div class="spinner"></div> Buscando placa ${plate} via Ponte Segura...</div>`;
+function setConnBadge(ok) {
+  const el = document.getElementById('connBadge');
+  el.textContent = ok ? '● Conectado' : '● Erro';
+  el.className = 'conn-badge ' + (ok ? 'conn-ok' : 'conn-err');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SELECIONAR PLACA (TAB 1)
+// ═══════════════════════════════════════════════════════════════
+async function selectPlate(placa) {
+  currentPlate = placa;
+  renderPlateList();
+  switchTab('monitor');
+  await loadPlatePane(placa, false);
+}
+
+async function loadPlatePane(placa, semFiltro) {
+  const pane = document.getElementById('paneMonitor');
+  pane.innerHTML = `<div class="loader-row"><div class="loader-spinner"></div> Buscando ${placa} — últimas 24h...</div>`;
 
   let rows;
   try {
-    const data = await queryViaPonte(plate);
+    const data = semFiltro ? await fetchPlateNoFilter(placa) : await fetchPlate(placa);
     rows = parseRows(data);
   } catch(e) {
-    right.innerHTML = `<div class="error-banner visible" style="margin-top:20px;">❌ Falha: ${e.message}</div>`;
+    pane.innerHTML = `<div class="error-box">❌ Falha ao buscar dados: ${e.message}</div>`;
     return;
   }
 
-  if (!rows || !rows.length) {
-    right.innerHTML = `
+  if (!rows?.length) {
+    pane.innerHTML = `
       <div class="empty-state">
         <div class="empty-icon">🔍</div>
-        <div class="empty-title">Nenhum dado encontrado</div>
-        <div class="empty-sub">A placa <strong>${plate}</strong> não retornou registros no momento.</div>
+        <div class="empty-title">Sem dados nas últimas 24h</div>
+        <div class="empty-sub">Nenhum evento encontrado para <strong>${placa}</strong>. Tente verificar via "Acompanhados" sem filtro de estado.</div>
       </div>`;
-    addToHistory(plate, null);
     return;
   }
 
-  const chronRows = [...rows].reverse();
-  const voltages = chronRows.map(r => r.tensao);
-  const lastVolt  = rows[0].tensao;
-  const maxV      = Math.max(...voltages.filter(v => v != null));
-  const minV      = Math.min(...voltages.filter(v => v != null));
-  const st        = voltStatus(lastVolt);
+  renderDetail(placa, rows, pane);
+}
 
-  const t0 = new Date(chronRows[0].hora);
-  const xLabels = chronRows.map(r => {
-    const dt = Math.round((new Date(r.hora) - t0) / 60000);
-    return dt + ' min';
+function renderDetail(placa, rows, container) {
+  const chrono  = [...rows].reverse();         // mais antigo → mais recente
+  const voltArr = chrono.map(r => r.tensao);
+  const lastV   = rows[0].tensao;
+  const valid   = voltArr.filter(v => v != null);
+  const maxV    = valid.length ? Math.max(...valid) : null;
+  const minV    = valid.length ? Math.min(...valid) : null;
+  const st      = voltStatus(lastV);
+
+  // Labels do eixo X (minutos desde o primeiro evento)
+  const t0 = chrono[0].hora ? new Date(chrono[0].hora) : null;
+  const xLabels = chrono.map(r => {
+    if (!t0 || !r.hora) return '';
+    return Math.round((new Date(r.hora) - t0) / 60000) + 'm';
   });
-  const pointColors = voltages.map(v =>
-    v == null ? '#8e8d88' : v >= 11 ? '#3b6d11' : v >= 7 ? '#ba7517' : '#a32d2d'
+
+  // Cor dos pontos
+  const ptColors = voltArr.map(v =>
+    v == null ? '#4c506a' : v >= 11 ? '#22c55e' : v >= 7 ? '#f59e0b' : '#ef4444'
   );
 
-  addToHistory(plate, lastVolt);
+  // Alerta de recuperação (tensão subindo para > 10V)
+  const isRecovering = lastV != null && lastV >= 10;
+  const isTracked    = trackedList.some(t => t.plate === placa);
+  const recoveryHTML = isRecovering && !isTracked ? `
+    <div class="recovery-alert">
+      <div class="recovery-text">
+        ⚠️ Tensão atual <strong>${lastV.toFixed(2)}V</strong> — este veículo pode sumir do filtro em breve.
+        Registre em <em>Acompanhados</em> para continuar monitorando.
+      </div>
+      <div class="recovery-actions">
+        <button class="btn btn-amber" onclick="addToTracked('${placa}', ${lastV})">Registrar</button>
+        <button class="btn btn-ghost" onclick="this.closest('.recovery-alert').remove()">Ignorar</button>
+      </div>
+    </div>` : '';
 
-  right.innerHTML = `
+  container.innerHTML = `
+    ${recoveryHTML}
+
     <div class="dash-header">
       <div>
-        <div class="dash-plate">${plate}</div>
-        <div class="dash-sub">${rows.length} registros &nbsp;·&nbsp; ${rows[rows.length-1]?.hora?.slice(0,10) || ''} → ${rows[0]?.hora?.slice(0,10) || ''}</div>
+        <div class="dash-plate">${placa}</div>
+        <div class="dash-sub">${rows.length} eventos · ${dtOf(rows[rows.length-1]?.hora)} → ${dtOf(rows[0]?.hora)}</div>
       </div>
-      <span class="status-pill ${st.pill}">${st.emoji} ${st.label}</span>
+      <span class="status-pill ${st.pill}"><span style="opacity:.7">${st.emoji}</span> ${st.label}</span>
     </div>
 
     <div class="metrics">
-      <div class="metric"><div class="metric-label">Tensão atual</div><div class="metric-val">${lastVolt != null ? lastVolt.toFixed(2) : '—'} V</div><div class="metric-sub">${rows[0]?.hora?.slice(11,19) || ''}</div></div>
-      <div class="metric"><div class="metric-label">Máx. no período</div><div class="metric-val">${isFinite(maxV) ? maxV.toFixed(2) : '—'} V</div></div>
-      <div class="metric"><div class="metric-label">Mín. no período</div><div class="metric-val">${isFinite(minV) ? minV.toFixed(2) : '—'} V</div></div>
-      <div class="metric"><div class="metric-label">Total eventos</div><div class="metric-val">${rows.length}</div></div>
-      <div class="metric"><div class="metric-label">Ignição</div><div class="metric-val" style="font-size:15px;">${rows[0]?.ignição || '—'}</div></div>
-      <div class="metric"><div class="metric-label">Movimentação</div><div class="metric-val" style="font-size:14px;">${rows[0]?.mov || '—'}</div></div>
+      <div class="metric">
+        <div class="metric-label">Tensão atual</div>
+        <div class="metric-val">${lastV != null ? lastV.toFixed(2) : '—'}<span style="font-size:13px;color:var(--muted)"> V</span></div>
+        <div class="metric-sub">${timeOf(rows[0]?.hora)}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Máx. 24h</div>
+        <div class="metric-val">${maxV != null ? maxV.toFixed(2) : '—'}<span style="font-size:13px;color:var(--muted)"> V</span></div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Mín. 24h</div>
+        <div class="metric-val">${minV != null ? minV.toFixed(2) : '—'}<span style="font-size:13px;color:var(--muted)"> V</span></div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Eventos</div>
+        <div class="metric-val">${rows.length}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Ignição</div>
+        <div class="metric-val sm">${rows[0]?.ignicao || '—'}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Movim.</div>
+        <div class="metric-val sm">${rows[0]?.mov || '—'}</div>
+      </div>
     </div>
 
     <div class="chart-card">
-      <div class="chart-top">
-        <div class="chart-title">Tempo (min) × Tensão (V)</div>
+      <div class="card-header">
+        <span class="card-title">Tempo (min) × Tensão (V) — últimas 24h</span>
         <div class="legend">
-          <div class="legend-item"><div class="legend-dot" style="background:var(--green-dot)"></div>≥ 11V Conectado</div>
-          <div class="legend-item"><div class="legend-dot" style="background:var(--amber-dot)"></div>7–11V Alerta</div>
-          <div class="legend-item"><div class="legend-dot" style="background:var(--red-dot)"></div>&lt; 7V Desconectado</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>≥11V</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div>7–11V</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>&lt;7V</div>
         </div>
       </div>
-      <div style="position:relative; width:100%; height:280px;">
+      <div style="position:relative;width:100%;height:240px;">
         <canvas id="voltChart"></canvas>
       </div>
     </div>
 
     <div class="table-card">
-      <div class="table-card-header"><div class="table-card-title">Histórico de eventos</div></div>
-      <div class="table-wrap caixa-rolagem-tabela">
+      <div class="table-card-head">
+        <span class="card-title">Histórico de eventos</span>
+      </div>
+      <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Hora</th><th>Tensão Bat.</th><th>Rastreador</th><th>Ignição</th><th>Mov.</th><th>Evento</th><th>GPS</th><th>GSM</th><th>Vel.</th><th>Delay</th><th>Mapa</th></tr>
+            <tr>
+              <th>Hora</th><th>Tensão</th><th>Rastreador</th><th>Ignição</th>
+              <th>Mov.</th><th>Evento</th><th>GPS</th><th>GSM</th><th>Vel.</th><th>Delay</th><th>Mapa</th>
+            </tr>
           </thead>
-          <tbody id="evtBody"></tbody>
+          <tbody>${rows.map(r => `
+            <tr>
+              <td>${timeOf(r.hora)}</td>
+              <td class="td-volt"><span class="vtag ${vtagClass(r.tensao)}">${r.tensao != null ? r.tensao.toFixed(2)+' V' : '—'}</span></td>
+              <td style="font-size:10px;">${r.rastr || '—'}</td>
+              <td>${r.ignicao || '—'}</td>
+              <td>${r.mov || '—'}</td>
+              <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;">${r.evento || '—'}</td>
+              <td>${r.sinalGPS || '—'}</td>
+              <td>${r.sinalGSM || '—'}</td>
+              <td>${r.vel != null ? r.vel+' km/h' : '—'}</td>
+              <td>${r.delay != null ? r.delay+' min' : '—'}</td>
+              <td>${r.maps ? `<a class="ext-link" href="${r.maps}" target="_blank">↗ Ver</a>` : '—'}</td>
+            </tr>`).join('')}
+          </tbody>
         </table>
       </div>
     </div>
   `;
 
-  const tbody = document.getElementById('evtBody');
-  // Alteração feita aqui para mostrar TODOS os eventos em vez de apenas os primeiros 200
-  const displayRows = rows;
-  tbody.innerHTML = displayRows.map(r => {
-    const vCls = r.tensao == null ? 'tag-gray' : r.tensao >= 11 ? 'tag-green' : r.tensao >= 7 ? 'tag-amber' : 'tag-red';
-    return `<tr>
-      <td>${r.hora?.slice(11,19) || r.hora || '—'}</td>
-      <td class="td-volt"><span class="tag ${vCls}">${r.tensao != null ? r.tensao.toFixed(2)+' V' : '—'}</span></td>
-      <td style="font-size:11px;">${r.rastr || '—'}</td>
-      <td>${r.ignição || '—'}</td>
-      <td>${r.mov || '—'}</td>
-      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;">${r.evento || '—'}</td>
-      <td>${r.sinalGPS || '—'}</td>
-      <td>${r.sinalGSM || '—'}</td>
-      <td>${r.vel != null ? r.vel+' km/h' : '—'}</td>
-      <td>${r.delay != null ? r.delay+' min' : '—'}</td>
-      <td>${r.maps ? `<a class="ext-link" href="${r.maps}" target="_blank">🗺 Ver</a>` : '—'}</td>
-    </tr>`;
-  }).join('');
+  // Desenha gráfico
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+  const gridC = 'rgba(255,255,255,0.06)';
+  const lblC  = '#4c506a';
 
-  if (chartInst) { chartInst.destroy(); chartInst = null; }
-  const isDark   = matchMedia('(prefers-color-scheme: dark)').matches;
-  const gridClr  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
-  const lblClr   = isDark ? '#b4b2a9' : '#5f5e5a';
-
-  chartInst = new Chart(document.getElementById('voltChart'), {
+  chartInstance = new Chart(document.getElementById('voltChart'), {
     type: 'line',
     data: {
       labels: xLabels,
       datasets: [{
-        label: 'Tensão (V)', data: voltages, borderColor: '#185fa5', borderWidth: 2, tension: 0.3, fill: false, pointBackgroundColor: pointColors, pointBorderColor: pointColors,
-        pointRadius: voltages.length <= 60 ? 4 : voltages.length <= 200 ? 2 : 1, pointHoverRadius: 6,
+        label: 'Tensão (V)',
+        data: voltArr,
+        borderColor: '#6366f1',
+        borderWidth: 1.5,
+        tension: 0.35,
+        fill: false,
+        pointBackgroundColor: ptColors,
+        pointBorderColor: ptColors,
+        pointRadius: voltArr.length <= 60 ? 3 : voltArr.length <= 200 ? 1.5 : 1,
+        pointHoverRadius: 5,
       }]
     },
     options: {
-      responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 300 },
       plugins: {
         legend: { display: false },
         tooltip: {
+          backgroundColor: 'rgba(24,27,36,.95)',
+          borderColor: 'rgba(99,102,241,.3)',
+          borderWidth: 1,
           callbacks: {
-            title: ctx => chronRows[ctx[0].dataIndex]?.hora || '',
-            label: ctx => ' Tensão: ' + (ctx.parsed.y != null ? ctx.parsed.y.toFixed(2) : '—') + ' V',
+            title: ctx => chrono[ctx[0].dataIndex]?.hora?.slice(0,19) || '',
+            label: ctx => ` Tensão: ${ctx.parsed.y != null ? ctx.parsed.y.toFixed(2) : '—'} V`,
             afterLabel: ctx => {
-              const r = chronRows[ctx.dataIndex];
-              return [' Ignição: ' + (r?.ignição || '—'), ' Mov.: ' + (r?.mov || '—'), ' Evento: ' + (r?.evento || '—')].join('\n');
+              const r = chrono[ctx.dataIndex];
+              return [
+                ` Ignição: ${r?.ignicao || '—'}`,
+                ` Mov.: ${r?.mov || '—'}`,
+                ` Evento: ${r?.evento || '—'}`
+              ].join('\n');
             }
           }
         }
       },
       scales: {
-        x: { grid: { color: gridClr }, ticks: { color: lblClr, font: { size: 10 }, maxRotation: 40, autoSkip: true, maxTicksLimit: 18 } },
-        y: { min: isFinite(minV) ? Math.max(0, minV - 0.5) : 0, max: isFinite(maxV) ? maxV + 0.5 : 14, grid: { color: gridClr }, ticks: { color: lblClr, font: { size: 11 }, callback: v => v.toFixed(1) + ' V' } }
+        x: {
+          grid: { color: gridC },
+          ticks: { color: lblC, font: { size: 9, family: 'IBM Plex Mono' }, maxRotation: 40, autoSkip: true, maxTicksLimit: 16 }
+        },
+        y: {
+          min: minV != null ? Math.max(0, minV - 0.5) : 0,
+          max: maxV != null ? maxV + 0.5 : 15,
+          grid: { color: gridC },
+          ticks: { color: lblC, font: { size: 10, family: 'IBM Plex Mono' }, callback: v => v.toFixed(1) + 'V' }
+        }
       }
     }
   });
 }
 
-loadHistory();
+// ═══════════════════════════════════════════════════════════════
+//  TAB 2 — ACOMPANHADOS
+// ═══════════════════════════════════════════════════════════════
+function loadTracked() {
+  try { trackedList = JSON.parse(localStorage.getItem('asb_tracked_v1') || '[]'); } catch { trackedList = []; }
+  updateTrackedBadge();
+}
+
+function saveTracked() {
+  localStorage.setItem('asb_tracked_v1', JSON.stringify(trackedList));
+  updateTrackedBadge();
+}
+
+function updateTrackedBadge() {
+  const pill = document.getElementById('trackedPill');
+  if (trackedList.length > 0) {
+    pill.textContent = trackedList.length;
+    pill.style.display = 'inline-block';
+  } else {
+    pill.style.display = 'none';
+  }
+}
+
+function addToTracked(plate, lastVolt, notes = '') {
+  if (trackedList.some(t => t.plate === plate)) {
+    showToast(`⚠️ ${plate} já está em Acompanhados`); return;
+  }
+  trackedList.unshift({
+    plate,
+    addedAt:    new Date().toISOString(),
+    notes,
+    lastVolt,
+    lastCheck:  new Date().toISOString(),
+    lastStatus: voltStatus(lastVolt).label,
+    lastHora:   null,
+  });
+  saveTracked();
+  renderTrackedPane();
+  showToast(`✅ ${plate} adicionado a Acompanhados`);
+}
+
+function removeFromTracked(plate) {
+  if (!confirm(`Remover ${plate} da lista de acompanhados?`)) return;
+  trackedList = trackedList.filter(t => t.plate !== plate);
+  saveTracked();
+  renderTrackedPane();
+  showToast(`🗑 ${plate} removido`);
+}
+
+async function checkTracked(plate) {
+  const row = document.getElementById(`tcard-${plate}`);
+  if (!row) return;
+  const statusEl = row.querySelector('.tracked-status-row');
+  statusEl.innerHTML = `<div class="loader-spinner"></div> <span style="font-size:11px;color:var(--muted)">Verificando…</span>`;
+
+  let rows;
+  try {
+    const data = await fetchPlateNoFilter(plate);
+    rows = parseRows(data);
+  } catch(e) {
+    statusEl.innerHTML = `<span style="color:var(--red-txt);font-size:11px">❌ ${e.message}</span>`;
+    return;
+  }
+
+  const item = trackedList.find(t => t.plate === plate);
+  if (item) {
+    item.lastVolt   = rows?.[0]?.tensao ?? null;
+    item.lastCheck  = new Date().toISOString();
+    item.lastStatus = voltStatus(item.lastVolt).label;
+    item.lastHora   = rows?.[0]?.hora ?? null;
+    saveTracked();
+  }
+  renderTrackedPane();
+  showToast(`🔄 ${plate} atualizado`);
+}
+
+function viewTrackedPlate(plate) {
+  currentPlate = plate;
+  renderPlateList();
+  switchTab('monitor');
+  loadPlatePane(plate, true);
+}
+
+function addTrackedFromForm() {
+  const plateEl = document.getElementById('newTrackedPlate');
+  const notesEl = document.getElementById('newTrackedNotes');
+  const plate   = plateEl.value.trim().toUpperCase();
+  const notes   = notesEl.value.trim();
+  if (!plate) { showToast('⚠️ Digite uma placa'); return; }
+  addToTracked(plate, null, notes);
+  plateEl.value = '';
+  notesEl.value = '';
+}
+
+function renderTrackedPane() {
+  const pane = document.getElementById('paneTracked');
+
+  const form = `
+    <div class="tracked-topbar">
+      <div>
+        <div class="tracked-heading">Veículos Acompanhados</div>
+        <div class="tracked-desc">
+          Quando um veículo se recupera (tensão > 10V), ele sai da query do Metabase.
+          Registre-o aqui para continuar acompanhando sem perder visibilidade.
+        </div>
+      </div>
+    </div>
+    <div class="add-form">
+      <span class="add-form-label">Adicionar</span>
+      <input class="add-input" id="newTrackedPlate" placeholder="Placa..." maxlength="8"
+             onkeydown="if(event.key==='Enter')addTrackedFromForm()" />
+      <input class="add-input notes" id="newTrackedNotes" placeholder="Observação..." />
+      <button class="btn btn-blue" onclick="addTrackedFromForm()">+ Adicionar</button>
+    </div>
+  `;
+
+  if (!trackedList.length) {
+    pane.innerHTML = form + `
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <div class="empty-title">Nenhum veículo acompanhado</div>
+        <div class="empty-sub">
+          Adicione placas manualmente acima, ou clique em <strong>"Registrar"</strong>
+          quando a tensão de um veículo se recuperar na aba de Monitoramento.
+        </div>
+      </div>`;
+    return;
+  }
+
+  const cards = trackedList.map(t => {
+    const st       = voltStatus(t.lastVolt);
+    const addedFmt = new Date(t.addedAt).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+    const chkFmt   = t.lastCheck ? new Date(t.lastCheck).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+    return `
+      <div class="tracked-card" id="tcard-${t.plate}">
+        <div class="tracked-card-top">
+          <div>
+            <div class="tracked-plate">${t.plate}</div>
+            <div class="tracked-meta">Adicionado ${addedFmt}</div>
+          </div>
+          <div class="tracked-actions">
+            <button class="btn btn-blue"  onclick="checkTracked('${t.plate}')">↺ Verificar</button>
+            <button class="btn btn-ghost" onclick="viewTrackedPlate('${t.plate}')">📊 Detalhar</button>
+            <button class="btn btn-red"   onclick="removeFromTracked('${t.plate}')">✕</button>
+          </div>
+        </div>
+        ${t.notes ? `<div class="tracked-notes-box">📝 ${t.notes}</div>` : ''}
+        <div class="tracked-status-row">
+          <span class="status-pill ${st.pill}"><span style="opacity:.7">${st.emoji}</span> ${st.label}</span>
+          <span class="tracked-volt">${t.lastVolt != null ? t.lastVolt.toFixed(2)+' V' : '—'}</span>
+          <span class="tracked-check">Verificado: ${chkFmt}</span>
+          ${t.lastHora ? `<span class="tracked-check">Último evento: ${dtOf(t.lastHora)}</span>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+
+  pane.innerHTML = form + `<div class="tracked-grid">${cards}</div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b  => b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  if (tab === 'monitor') {
+    document.getElementById('tabBtnMonitor').classList.add('active');
+    document.getElementById('paneMonitor').classList.add('active');
+  } else {
+    document.getElementById('tabBtnTracked').classList.add('active');
+    document.getElementById('paneTracked').classList.add('active');
+    renderTrackedPane();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  REFRESH GERAL
+// ═══════════════════════════════════════════════════════════════
+async function refreshAll() {
+  if (isRefreshing) return;
+  isRefreshing = true;
+
+  const btn  = document.getElementById('refreshBtn');
+  const spin = document.getElementById('spinIcon');
+  btn.disabled = true;
+  spin.classList.add('spinning');
+
+  try {
+    await loadPlateList();
+    if (currentPlate) await loadPlatePane(currentPlate, false);
+  } finally {
+    btn.disabled = false;
+    spin.classList.remove('spinning');
+    isRefreshing = false;
+    showToast('✅ Lista atualizada');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════════════
+let _toastTmr;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTmr);
+  _toastTmr = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════
+loadTracked();
+loadPlateList();
 </script>
 </body>
 </html>
