@@ -823,7 +823,7 @@ function parseRows(data) {
   });
 }
 // ═══════════════════════════════════════════════════════════════
-//  BRIDGE CALLS
+//  BRIDGE CALLS (DATAS VAZIAS PARA PUXAR TODO O HISTÓRICO)
 // ═══════════════════════════════════════════════════════════════
 async function bridgeGet(qs) {
   const res = await fetch(`${URL_PONTE}?${qs}`);
@@ -831,6 +831,24 @@ async function bridgeGet(qs) {
   const json = await res.json();
   if (json.erro) throw new Error(json.erro);
   return json;
+}
+
+// Busca todas as placas (Data em branco, igual ao seu Metabase)
+async function fetchAllPlates() {
+  const qs = `placa=&${FILTROS_ESTADO}&DATA_INICIAL=&DATA_FINAL=`;
+  return bridgeGet(qs);
+}
+
+// Busca detalhes de uma placa específica
+async function fetchPlate(placa) {
+  const qs = `placa=${encodeURIComponent(placa)}&DATA_INICIAL=&DATA_FINAL=`;
+  return bridgeGet(qs);
+}
+
+// Busca placa sem filtro de estado (para Acompanhados)
+async function fetchPlateNoFilter(placa) {
+  const qs = `placa=${encodeURIComponent(placa)}&sem_filtro=1&DATA_INICIAL=&DATA_FINAL=`;
+  return bridgeGet(qs);
 }
 
 // Busca todas as placas (últimas 24h, filtrado por ESTADO_BATERIA)
