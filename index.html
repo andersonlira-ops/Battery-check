@@ -172,24 +172,38 @@
       grid.innerHTML = '';
       loader.style.display = 'flex';
 
+      // Criamos um identificador único para evitar que o navegador use o cache velho
+      const cacheBuster = `&cb=${Date.now()}`;
+      const finalUrl = URL_API + (URL_API.includes('?') ? '&' : '?') + cacheBuster;
+
       try {
-        // AJUSTE AQUI: Adicionamos o modo 'cors' e redirecionamento automático
-        const response = await fetch(URL_API, {
+        // Mudamos a estratégia do fetch para 'no-cors' não é viável para ler JSON,
+        // então usamos a técnica de redirecionamento manual do Google
+        const response = await fetch(finalUrl, {
           method: 'GET',
-          mode: 'cors',
-          redirect: 'follow'
+          mode: 'cors', // Mantemos cors mas vamos tratar o redirecionamento
+          credentials: 'omit' // <--- ISSO AQUI É O SEGREDO (Ignora cookies de outras contas)
         });
+
+        if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
 
         const dados = await response.json();
         
-        if (dados.erro) { throw new Error(dados.erro); }
+        if (dados.erro) throw new Error(dados.erro);
         
         carrosGlobal = dados;
         renderizarCards(carrosGlobal);
         atualizarStats();
       } catch (e) {
-        console.error(e);
-        loader.innerHTML = `<div style="color:var(--neon-red);">ERRO DE CONEXÃO: ${e.message}<br><small style="color:#666">Verifique se o link no código termina em /exec</small></div>`;
+        console.error("Erro detalhado:", e);
+        loader.innerHTML = `
+          <div style="color:var(--neon-red); text-align:center;">
+            <p>ERRO DE CONEXÃO: ${e.message}</p>
+            <p style="font-size:12px; color:#666; margin-top:10px;">
+              Dica: Abra o site em uma <b>JANELA ANÔNIMA</b>.<br>
+              Conflitos entre contas Google (Kovi vs Pessoal) causam este erro.
+            </p>
+          </div>`;
       }
     }
     function renderizarCards(lista) {
