@@ -210,40 +210,84 @@
       }
     }
 
-    // A FUNÇÃO QUE FALTAVA: Desenha os cards na tela
+   // A FUNÇÃO QUE FALTAVA: Desenha os cards na tela agrupados por BASE
     function renderizarCards(carros) {
-      const grid = document.getElementById('grid');
-      grid.innerHTML = '';
+      const mainContainer = document.getElementById('grid');
+      // Removemos a classe grid do container principal para ele empilhar as sessões
+      mainContainer.className = ''; 
+      mainContainer.innerHTML = '';
 
       if (carros.length === 0) {
-        grid.innerHTML = '<div style="color:#666; text-align:center; width:100%; grid-column: 1 / -1;">Nenhum veículo encontrado.</div>';
+        mainContainer.innerHTML = '<div style="color:#666; text-align:center; width:100%; padding-top:20px;">Nenhum veículo encontrado.</div>';
         return;
       }
 
+      // 1. Agrupar os carros pela Base (tudo o que vem antes do primeiro traço no Local)
+      const grupos = {};
       carros.forEach(carro => {
-        // Cria o card base
-        const card = document.createElement('div');
-        // Adiciona a classe 'vendido' ou 'disp' dependendo do status do carro
-        card.className = 'card ' + (carro.vendido ? 'vendido' : 'disp');
-
-        // Preenche o HTML do card com as variáveis
-        card.innerHTML = `
-          ${carro.vendido ? '<div class="alerta-badge">VENDIDO</div>' : ''}
-          <div class="card-placa">${carro.placa}</div>
-          <div class="card-modelo">${carro.modelo}</div>
-          
-          <div class="info-row">
-            <span class="info-label">Bateria</span>
-            <span class="info-val">${carro.bateria}V</span>
-          </div>
-          
-          <div class="info-row">
-            <span class="info-label">Local</span>
-            <span class="info-val">${carro.local}</span>
-          </div>
-        `;
+        let base = "SEM LOCAL";
+        if (carro.local && carro.local !== "Sem local" && carro.local !== "—") {
+          base = carro.local.split('-')[0].toUpperCase();
+        }
         
-        grid.appendChild(card);
+        if (!grupos[base]) {
+          grupos[base] = [];
+        }
+        grupos[base].push(carro);
+      });
+
+      // 2. Organizar as bases em ordem alfabética (opcional, mas fica mais bonito)
+      const nomesBases = Object.keys(grupos).sort();
+
+      // 3. Criar uma sessão (Título + Grid) para cada Base
+      nomesBases.forEach(base => {
+        const carrosDaBase = grupos[base];
+
+        // Cria o container da sessão
+        const section = document.createElement('div');
+        section.style.marginBottom = '50px'; // Espaço entre as bases
+
+        // Cria o cabeçalho da Base
+        const header = document.createElement('div');
+        header.innerHTML = `📍 BASE: <strong>${base}</strong> <span style="color: var(--neon-green); font-size: 14px; margin-left: 10px; font-weight: normal;">| ${carrosDaBase.length} veículo(s)</span>`;
+        header.style.fontSize = '20px';
+        header.style.color = 'var(--text)';
+        header.style.borderBottom = '1px solid var(--border-dark)';
+        header.style.paddingBottom = '10px';
+        header.style.marginBottom = '20px';
+        header.style.letterSpacing = '1px';
+
+        // Cria o Grid específico desta base
+        const baseGrid = document.createElement('div');
+        baseGrid.className = 'grid'; // Usamos a classe grid original para os cards ficarem lado a lado
+
+        // Adiciona os carros no grid da base
+        carrosDaBase.forEach(carro => {
+          const card = document.createElement('div');
+          card.className = 'card ' + (carro.vendido ? 'vendido' : 'disp');
+
+          card.innerHTML = `
+            ${carro.vendido ? '<div class="alerta-badge">VENDIDO</div>' : ''}
+            <div class="card-placa">${carro.placa}</div>
+            <div class="card-modelo">${carro.modelo}</div>
+            
+            <div class="info-row">
+              <span class="info-label">Bateria</span>
+              <span class="info-val">${carro.bateria}V</span>
+            </div>
+            
+            <div class="info-row">
+              <span class="info-label">Local</span>
+              <span class="info-val">${carro.local}</span>
+            </div>
+          `;
+          baseGrid.appendChild(card);
+        });
+
+        // Monta a estrutura final
+        section.appendChild(header);
+        section.appendChild(baseGrid);
+        mainContainer.appendChild(section);
       });
     }
 
