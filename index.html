@@ -165,20 +165,28 @@
 
     let carrosGlobal = [];
 
-    function carregarDados() {
+    async function carregarDados() {
       const grid = document.getElementById('grid');
       const loader = document.getElementById('loader');
       
       grid.innerHTML = '';
       loader.style.display = 'flex';
 
-      // 1. Criamos um nome de função temporário e único
-      const callbackName = 'google_callback_' + Math.round(Math.random() * 1000000);
-      
-      // 2. Definimos o que o site vai fazer quando o Google responder
-      window[callbackName] = function(dados) {
-        delete window[callbackName]; // Limpa a memória
-        document.getElementById('script_loader')?.remove(); // Remove o script usado
+      try {
+        // Usa fetch normal, omitindo cookies para evitar bloqueio da conta Kovi
+        const response = await fetch(URL_API, {
+          method: 'GET',
+          headers: {
+             'Accept': 'application/json'
+          }
+        });
+
+        // Se a resposta for redirecionada pelo Google (o que ele faz por segurança), nós seguimos
+        if (!response.ok) {
+           throw new Error(`Erro de rede: ${response.status}`);
+        }
+
+        const dados = await response.json();
 
         if (dados.erro) {
           loader.innerHTML = `<div style="color:var(--neon-red);">ERRO: ${dados.erro}</div>`;
@@ -189,56 +197,18 @@
         renderizarCards(carrosGlobal);
         atualizarStats();
         loader.style.display = 'none';
-      };
 
-      // 3. O "Gatilho Mágico" (JSONP) que ignora o bloqueio de CORS
-      const script = document.createElement('script');
-      script.id = 'script_loader';
-      // Adicionamos o callback e um número aleatório (cache buster) no link
-      script.src = URL_API + (URL_API.includes('?') ? '&' : '?') + 'callback=' + callbackName + '&cb=' + Date.now();
-      
-      // Se a internet cair ou o Google não responder
-      script.onerror = () => {
-        loader.innerHTML = `<div style="color:var(--neon-red);">ERRO DE CONEXÃO: Falha ao carregar os dados do Google.</div>`;
-        delete window[callbackName];
-      };
-
-      document.body.appendChild(script);
-    }
-    function renderizarCards(lista) {
-      const grid = document.getElementById('grid');
-      const loader = document.getElementById('loader');
-      loader.style.display = 'none';
-      grid.innerHTML = '';
-
-      if (lista.length === 0) {
-        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #666; margin-top: 50px;">Nenhum veículo encontrado.</div>`;
-        return;
-      }
-
-      lista.forEach(carro => {
-        // Se for vendido, classe = 'vendido'. Se não, classe = 'disp'
-        const classeStatus = carro.vendido ? 'vendido' : 'disp';
-        
-        const card = document.createElement('div');
-        card.className = `card ${classeStatus}`;
-        card.innerHTML = `
-          <div class="alerta-badge">VENDIDO</div>
-          <div class="card-placa">${carro.placa}</div>
-          <div class="card-modelo">${carro.modelo || 'MODELO NÃO INFORMADO'}</div>
-          
-          <div class="info-row">
-            <span class="info-label">Bateria</span>
-            <span class="info-val bateria-critica">${carro.bateria} V</span>
-          </div>
-          
-          <div class="info-row">
-            <span class="info-label">Localização</span>
-            <span class="info-val">${carro.local}</span>
+      } catch (e) {
+        console.error("Falha detalhada:", e);
+        loader.innerHTML = `
+          <div style="color:var(--neon-red); text-align:center;">
+             <p>ERRO DE CONEXÃO.</p>
+             <p style="font-size:12px; color:#666; margin-top:10px;">
+                Abra a aba "Network" no Console (F12) para ver o bloqueio exato.
+             </p>
           </div>
         `;
-        grid.appendChild(card);
-      });
+      }
     }
 
     function atualizarStats() {
