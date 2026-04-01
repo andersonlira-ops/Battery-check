@@ -776,16 +776,20 @@ function vtagClass(v) {
 // ═══════════════════════════════════════════════════════════════
 //  PARSE DE DADOS METABASE
 // ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+//  PARSE DE DADOS METABASE (VERSÃO BLINDADA)
+// ═══════════════════════════════════════════════════════════════
 function parseRows(data) {
   let raw = [];
 
+  // 1. Extrai os dados forçando o NOME REAL da coluna do banco (c.name)
   if (data?.data?.rows) {
-    const cols = data.data.cols.map(c => c.display_name || c.name);
+    const cols = data.data.cols.map(c => c.name);
     raw = data.data.rows.map(row => {
       const o = {}; cols.forEach((n, i) => o[n] = row[i]); return o;
     });
   } else if (data?.rows && Array.isArray(data.rows)) {
-    const cols = data.cols.map(c => c.display_name || c.name);
+    const cols = data.cols.map(c => c.name);
     raw = data.rows.map(row => {
       const o = {}; cols.forEach((n, i) => o[n] = row[i]); return o;
     });
@@ -793,22 +797,31 @@ function parseRows(data) {
     raw = data;
   }
 
-  return raw.map(r => ({
-    placa:    r['Placa']            || r['placa']    || null,
-    hora:     r['Hora do evento']   || r['hora']     || null,
-    tensao:   r['Tensão Bateria:']  != null ? parseFloat(r['Tensão Bateria:']) : null,
-    rastr:    r['Rastreador:']      || null,
-    ignicao:  r['Ignicao:']         || r['ignicao']  || null,
-    mov:      r['Movimentando:']    || null,
-    evento:   r['Evento']           || null,
-    sinalGPS: r['Sinal GPS:']       || null,
-    sinalGSM: r['Qualidade do Sinal:'] || null,
-    delay:    r['delay']            != null ? r['delay'] : null,
-    maps:     r['maps']             || null,
-    vel:      r['Velocidade:']      != null ? r['Velocidade:'] : null,
-  }));
-}
+  // 2. Mapeia para o painel convertendo TUDO para minúsculas (Adeus erros de digitação!)
+  return raw.map(r => {
+    const rowLimpa = {};
+    for(let key in r) { rowLimpa[key.toLowerCase()] = r[key]; }
 
+    return {
+      placa:    rowLimpa['placa'] || null,
+      // Puxa a data nova do seu SQL
+      hora:     rowLimpa['ultima_atualizacao'] || null,
+      // Puxa a bateria nova do seu SQL
+      tensao:   rowLimpa['battery_car'] != null ? parseFloat(rowLimpa['battery_car']) : null,
+      // Evento e Maps
+      evento:   rowLimpa['evento'] || null,
+      maps:     rowLimpa['maps'] || null,
+      // Como o novo SQL é mais limpo, os campos abaixo não existem mais, deixamos nulos para não dar erro:
+      rastr:    rowLimpa['status'] || null, // Usamos o status do carro para não ficar vazio
+      ignicao:  null,
+      mov:      null,
+      sinalGPS: null,
+      sinalGSM: null,
+      delay:    null,
+      vel:      null
+    };
+  });
+}
 // ═══════════════════════════════════════════════════════════════
 //  BRIDGE CALLS
 // ═══════════════════════════════════════════════════════════════
