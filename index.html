@@ -823,52 +823,38 @@ function parseRows(data) {
   });
 }
 // ═══════════════════════════════════════════════════════════════
-//  BRIDGE CALLS (DATAS VAZIAS PARA PUXAR TODO O HISTÓRICO)
+//  BRIDGE CALLS (ESTRITAMENTE ÚLTIMAS 24 HORAS)
 // ═══════════════════════════════════════════════════════════════
 async function bridgeGet(qs) {
   const res = await fetch(`${URL_PONTE}?${qs}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const json = await res.json();
-  if (json.erro) throw new Error(json.erro);
-  return json;
+  const text = await res.text();
+  try {
+    const json = JSON.parse(text);
+    if (json.erro) throw new Error(json.erro);
+    return json;
+  } catch (err) {
+    throw new Error(`Resposta inválida do servidor. Detalhe: ${text.substring(0,50)}`);
+  }
 }
 
-// Busca todas as placas (Data em branco, igual ao seu Metabase)
-async function fetchAllPlates() {
-  const qs = `placa=&${FILTROS_ESTADO}&DATA_INICIAL=&DATA_FINAL=`;
-  return bridgeGet(qs);
-}
-
-// Busca detalhes de uma placa específica
-async function fetchPlate(placa) {
-  const qs = `placa=${encodeURIComponent(placa)}&DATA_INICIAL=&DATA_FINAL=`;
-  return bridgeGet(qs);
-}
-
-// Busca placa sem filtro de estado (para Acompanhados)
-async function fetchPlateNoFilter(placa) {
-  const qs = `placa=${encodeURIComponent(placa)}&sem_filtro=1&DATA_INICIAL=&DATA_FINAL=`;
-  return bridgeGet(qs);
-}
-
-// Busca todas as placas (últimas 24h, filtrado por ESTADO_BATERIA)
+// Busca todas as placas (últimas 24 horas)
 async function fetchAllPlates() {
   const qs = `placa=&${FILTROS_ESTADO}&DATA_INICIAL=${encodeURIComponent(ago24h())}&DATA_FINAL=${encodeURIComponent(now())}`;
   return bridgeGet(qs);
 }
 
-// Busca detalhes de uma placa específica (últimas 24h)
+// Busca detalhes de uma placa específica (últimas 24 horas)
 async function fetchPlate(placa) {
   const qs = `placa=${encodeURIComponent(placa)}&DATA_INICIAL=${encodeURIComponent(ago24h())}&DATA_FINAL=${encodeURIComponent(now())}`;
   return bridgeGet(qs);
 }
 
-// Busca placa sem filtro de estado (para Acompanhados)
+// Busca placa sem filtro de estado (para Acompanhados) nas últimas 24h
 async function fetchPlateNoFilter(placa) {
   const qs = `placa=${encodeURIComponent(placa)}&sem_filtro=1&DATA_INICIAL=${encodeURIComponent(ago24h())}&DATA_FINAL=${encodeURIComponent(now())}`;
   return bridgeGet(qs);
 }
-
 // ═══════════════════════════════════════════════════════════════
 //  CARREGAR LISTA DE PLACAS
 // ═══════════════════════════════════════════════════════════════
