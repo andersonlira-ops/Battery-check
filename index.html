@@ -173,7 +173,13 @@
       loader.style.display = 'flex';
 
       try {
-        const response = await fetch(URL_API);
+        // AJUSTE AQUI: Adicionamos o modo 'cors' e redirecionamento automático
+        const response = await fetch(URL_API, {
+          method: 'GET',
+          mode: 'cors',
+          redirect: 'follow'
+        });
+
         const dados = await response.json();
         
         if (dados.erro) { throw new Error(dados.erro); }
@@ -182,10 +188,10 @@
         renderizarCards(carrosGlobal);
         atualizarStats();
       } catch (e) {
-        loader.innerHTML = `<div style="color:var(--neon-red);">ERRO DE CONEXÃO: ${e.message}</div>`;
+        console.error(e);
+        loader.innerHTML = `<div style="color:var(--neon-red);">ERRO DE CONEXÃO: ${e.message}<br><small style="color:#666">Verifique se o link no código termina em /exec</small></div>`;
       }
     }
-
     function renderizarCards(lista) {
       const grid = document.getElementById('grid');
       const loader = document.getElementById('loader');
